@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# School Hub: V1 demo (Stage A)
 
-## Getting Started
+A mobile-first family dashboard that brings school updates for several children at different schools into one place.
 
-First, run the development server:
+> **DEMO:** all people, schools and messages are fictional. No accounts, database, API keys or real integrations are used.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Production build: `npm run build && npm start`. Checks: `npx tsc --noEmit`, `npm run lint`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+For the best preview, open it at iPhone size (browser dev tools → device toolbar), or on a phone on the same Wi-Fi at `http://<your-computer-ip>:3000`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## What's included (Tonight milestone, docs/03)
 
-## Learn More
+- **Home:** briefing, items to review, to-do list with completion, upcoming events, latest notices, source health
+- **Inbox:** unified feed grouped by date received, type filter (`?kind=task|event|announcement`), expandable source evidence
+- **Calendar:** two-week strip and 30-day agenda of events and deadlines, with stale-source warnings
+- **Share:** honest placeholder; extraction is **not** connected
+- Child filter (Everyone / Maya / Leo) across all screens. Filter and completed tasks are saved in `localStorage`.
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/lib/types.ts               Domain types (mirror docs/02 entities + extraction contract)
+src/lib/fixtures/              Fictional data, dates relative to "now" (school days)
+src/lib/data/index.ts          Data-access boundary: swap fixtures → Supabase here
+src/lib/selectors.ts           Pure filtering/agenda/source-health logic (reusable by agents/jobs)
+src/lib/format.ts              Date formatting (viewer's local time)
+src/components/                FamilyProvider (client state), ItemCard, nav, filter, source health
+src/app/                       Routes: /, /inbox, /calendar, /share
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Key rules already encoded:
+- Every item has `sources[]` with `receivedAt` and a verbatim `excerpt`.
+- `childId: null` means school-wide. Unknown children or dates are never invented.
+- Source status is `connected | stale | not_connected`. Unconnected sources are never shown as "nothing new".
+- `reviewStatus: needs_review` items are flagged as unconfirmed.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Next (Sprint 1)
+Supabase auth + family-scoped RLS → paste → server-side structured extraction (Zod) → parent review → saved item.
