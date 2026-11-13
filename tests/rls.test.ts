@@ -49,7 +49,7 @@ describe("family workspace sharing", () => {
 describe("cross-family isolation", () => {
   it("cannot read another family's rows", async () => {
     for (const table of ["families", "family_members", "children", "items", "source_documents", "item_sources", "family_invites"] as const) {
-      const { data } = await b1.client.from(table).select("*").eq(table === "families" ? "id" : "family_id", famA);
+      const { data } = await b1.client.from(table).select("*").eq((table === "families" ? "id" : "family_id") as never, famA);
       expect(data ?? [], `${table} leaked`).toHaveLength(0);
     }
   });
