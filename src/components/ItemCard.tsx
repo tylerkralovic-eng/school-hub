@@ -1,188 +1,147 @@
-"use client";
-
-import { useState } from "react";
-import { useFamily } from "@/components/FamilyProvider";
+import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { ChildChip, KindIcon, StatusDot, statusMeta } from "@/components/ui";
-import { formatAgo, formatDue, formatEventWhen, formatReceived } from "@/lib/format";
-import { childrenForItem, latestReceivedAt, schoolById, sourceById } from "@/lib/selectors";
-import type { SchoolItem } from "@/lib/types";
+import { TaskToggle } from "@/components/TaskToggle";
+import { ChildChip, FamilyChip, KindIcon } from "@/components/ui";
+import { platformName } from "@/lib/platforms";
+import type { FamilyContext } from "@/lib/server/context";
+import { receivedAt, type ItemSourceView, type ItemView } from "@/lib/server/items";
+import { dueLabel, fmt, fmtTime, receivedLabel, relativeDay } from "@/lib/time";
+import { CATEGORY_LABELS, CHANNEL_LABELS } from "@/lib/types";
 
-export function TaskCheckbox({ item }: { item: SchoolItem }) {
-  const { isDone, toggleDone } = useFamily();
-  const done = isDone(item.id);
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={done}
-      aria-label={done ? `Mark "${item.title}" as not done` : `Mark "${item.title}" as done`}
-      onClick={() => toggleDone(item.id)}
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all active:scale-90 ${
-        done
-          ? "border-emerald-500 bg-emerald-500 text-white"
-          : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-300"
-      }`}
-    >
-      <Icon name="check" className="h-4 w-4" strokeWidth={3} />
-    </button>
-  );
+export type CardCtx = Pick<FamilyContext, "family" | "children" | "schools" | "members">;
+
+export function sourceName(s: ItemSourceView): string {
+  const d = s.document;
+  if (!d) return "Original deleted";
+  const via = CHANNEL_LABELS[d.channel];
+  if (d.platform_key) return `${platformName(d.platform_key)} · via ${via}`;
+  if (d.sender) return `${d.sender} · ${via}`;
+  return d.title ? `${d.title} · ${via}` : via;
 }
 
-export function WhenLine({ item }: { item: SchoolItem }) {
-  const { now, isDone } = useFamily();
+export function WhenLine({ item, ctx }: { item: ItemView; ctx: CardCtx }) {
+  const tz = ctx.family.timezone;
   const parts: React.ReactNode[] = [];
-
-  if (item.kind === "task" && item.dueAt) {
-    const due = formatDue(item.dueAt, now);
-    const urgent = due.urgent && !isDone(item.id);
+  if (item.kind === "task" && item.due_at) {
+    const due = dueLabel(item.due_at, tz);
+    const tone = item.completed_at ? "text-slate-500" : due.tone === "overdue" ? "text-rose-600" : due.tone === "soon" ? "text-rose-600" : "text-slate-600";
     parts.push(
-      <span
-        key="due"
-        className={`inline-flex items-center gap-1 font-medium ${urgent ? "text-rose-600" : "text-slate-600"}`}
-      >
+      <span key="due" className={`inline-flex items-center gap-1 font-medium ${tone}`}>
         <Icon name="clock" className="h-3.5 w-3.5" />
-        {isDone(item.id) ? "Done" : due.label}
+        {item.completed_at ? "Done" : due.label}
       </span>,
     );
   }
-  if (item.eventAt) {
+  if (item.starts_at) {
+    let when = relativeDay(item.starts_at, tz);
+    if (item.ends_at && item.all_day) {
+      const endDay = fmt(item.ends_at, tz, { month: "short", day: "numeric" });
+      if (endDay !== fmt(item.starts_at, tz, { month: "short", day: "numeric" })) when += ` – ${fmt(item.ends_at, tz, { weekday: "short", month: "short", day: "numeric" })}`;
+    } else if (!item.all_day) {
+      when += ` · ${fmtTime(item.starts_at, tz)}`;
+      if (item.ends_at) when += `–${fmtTime(item.ends_at, tz)}`;
+    } else when += " · All day";
     parts.push(
       <span key="when" className="inline-flex items-center gap-1 font-medium text-slate-600">
         <Icon name="calendar" className="h-3.5 w-3.5" />
-        {formatEventWhen(item, now)}
+        {when}
       </span>,
     );
   }
-  if (item.location) {
+  if (item.location)
     parts.push(
       <span key="loc" className="inline-flex items-center gap-1 text-slate-500">
         <Icon name="pin" className="h-3.5 w-3.5" />
         {item.location}
       </span>,
     );
-  }
-  if (parts.length === 0) return null;
+  if (item.amount_cents != null)
+    parts.push(
+      <span key="amt" className="font-medium text-slate-600">
+        ${(item.amount_cents / 100).toFixed(2)}
+      </span>,
+    );
+  if (!parts.length) return null;
   return <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">{parts}</div>;
 }
 
-export function ItemCard({ item, compact = false }: { item: SchoolItem; compact?: boolean }) {
-  const { snapshot, now, isDone } = useFamily();
-  const [open, setOpen] = useState(false);
-  const kids = childrenForItem(snapshot, item);
-  const school = schoolById(snapshot, item.schoolId);
-  const primary = item.sources[0];
-  const primarySource = primary ? sourceById(snapshot, primary.sourceId) : undefined;
-  const staleSource = item.sources
-    .map((s) => sourceById(snapshot, s.sourceId))
-    .find((s) => s?.status === "stale");
-  const done = item.kind === "task" && isDone(item.id);
-  const evidenceId = `evidence-${item.id}`;
+export function WhoChips({ item, ctx }: { item: Pick<ItemView, "child_id" | "school_id">; ctx: CardCtx }) {
+  const child = ctx.children.find((c) => c.id === item.child_id);
+  const school = ctx.schools.find((s) => s.id === item.school_id);
+  if (child) return <ChildChip child={child} />;
+  if (school) {
+    const kids = ctx.children.filter((c) => c.school_id === school.id);
+    return (
+      <>
+        {kids.map((k) => <ChildChip key={k.id} child={k} />)}
+        <span className="text-xs text-slate-500">{school.short_name || school.name} · school-wide</span>
+      </>
+    );
+  }
+  return <FamilyChip />;
+}
+
+export function ItemCard({ item, ctx, compact = false, back }: { item: ItemView; ctx: CardCtx; compact?: boolean; back?: string }) {
+  const tz = ctx.family.timezone;
+  const done = item.kind === "task" && Boolean(item.completed_at);
+  const assignee = ctx.members.find((m) => m.user_id === item.assignee_id);
+  const sources = item.item_sources;
+  const first = sources[0];
 
   return (
-    <article
-      className={`rounded-2xl border bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-opacity ${
-        item.reviewStatus === "needs_review" ? "border-amber-300" : "border-slate-200/80"
-      } ${done ? "opacity-60" : ""}`}
-    >
+    <article className={`rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ${done ? "opacity-60" : ""}`}>
       <div className="flex gap-3">
         <KindIcon kind={item.kind} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-3">
-            <h3
-              className={`flex-1 text-[15px] font-semibold leading-snug text-slate-900 ${done ? "line-through decoration-slate-400" : ""}`}
-            >
-              {item.title}
+            <h3 className={`flex-1 text-[15px] font-semibold leading-snug text-slate-900 ${done ? "line-through decoration-slate-400" : ""}`}>
+              <Link href={`/items/${item.id}${back ? `?back=${encodeURIComponent(back)}` : ""}`} className="hover:underline">{item.title}</Link>
             </h3>
-            {item.kind === "task" && <TaskCheckbox item={item} />}
+            {item.kind === "task" && <TaskToggle id={item.id} title={item.title} done={done} />}
           </div>
-          {!compact && <p className="mt-1 text-sm leading-relaxed text-slate-600">{item.summary}</p>}
-          <WhenLine item={item} />
-
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-            {kids.map((c) => (
-              <ChildChip key={c.id} child={c} />
-            ))}
-            {school && <span>{item.childId ? school.shortName : `${school.shortName} · school-wide`}</span>}
-          </div>
-
-          {item.reviewStatus === "needs_review" && (
-            <div className="mt-3 flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
-              <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                <span className="font-semibold">Unconfirmed.</span> {item.reviewNote}
+          {!compact && item.details && <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-slate-600">{item.details}</p>}
+          <WhenLine item={item} ctx={ctx} />
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <WhoChips item={item} ctx={ctx} />
+            {item.category !== "general" && (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{CATEGORY_LABELS[item.category]}</span>
+            )}
+            {assignee && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                <Icon name="user" className="h-3 w-3" /> {assignee.display_name}
               </span>
-            </div>
-          )}
-          {staleSource && (
-            <div className="mt-3 flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
-              <Icon name="clock" className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                From a source last checked {formatAgo(staleSource.lastSyncedAt, now)}. Details may have changed.
-              </span>
-            </div>
-          )}
-
-          {/* Source line: every update shows where it came from and when. */}
-          <div className="mt-3 border-t border-slate-100 pt-2.5">
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-expanded={open}
-              aria-controls={evidenceId}
-              className="-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-2 rounded-lg px-1 py-0.5 text-left text-xs text-slate-500 hover:bg-slate-50"
-            >
-              {primarySource && <StatusDot status={primarySource.status} />}
-              <span className="min-w-0 flex-1 truncate">
-                <span className="font-medium text-slate-600">{primarySource?.name ?? "Unknown source"}</span>
-                {" · "}
-                {formatReceived(latestReceivedAt(item), now)}
-                {item.sources.length > 1 && ` · ${item.sources.length} sources`}
-              </span>
-              <span className="shrink-0 font-medium text-indigo-600">{open ? "Hide" : "Source"}</span>
-              <Icon
-                name="chevronDown"
-                className={`h-3.5 w-3.5 shrink-0 text-indigo-600 transition-transform ${open ? "rotate-180" : ""}`}
-              />
-            </button>
-            {open && (
-              <div id={evidenceId} className="mt-2 space-y-2">
-                {item.sources.length > 1 && (
-                  <p className="text-xs text-slate-500">
-                    Merged from {item.sources.length} sources that described the same update.
-                  </p>
-                )}
-                {item.sources.map((ref, i) => {
-                  const src = sourceById(snapshot, ref.sourceId);
-                  return (
-                    <figure key={i} className="rounded-xl bg-slate-50 px-3 py-2.5">
-                      <blockquote className="text-[13px] italic leading-relaxed text-slate-700">
-                        “{ref.excerpt}”
-                      </blockquote>
-                      <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                        {src && <StatusDot status={src.status} />}
-                        <span className="font-medium">{src?.name}</span>
-                        {ref.from && <span>· {ref.from}</span>}
-                        <span>
-                          · Received{" "}
-                          {new Date(ref.receivedAt).toLocaleString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        {src && src.status !== "connected" && (
-                          <span className={statusMeta[src.status].text}>· {statusMeta[src.status].label}</span>
-                        )}
-                      </figcaption>
-                    </figure>
-                  );
-                })}
-              </div>
             )}
           </div>
+
+          <details className="group mt-3 border-t border-slate-100 pt-2.5">
+            <summary className="-mx-1 flex cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-0.5 text-xs text-slate-500 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-medium text-slate-600">{first ? sourceName(first) : "Added by hand"}</span>
+                {" · "}
+                {receivedLabel(receivedAt(item), tz)}
+                {sources.length > 1 && ` · ${sources.length} sources`}
+              </span>
+              <span className="shrink-0 font-medium text-indigo-600">Source</span>
+              <Icon name="chevronDown" className="h-3.5 w-3.5 shrink-0 text-indigo-600 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2 space-y-2">
+              {sources.length === 0 && <p className="text-xs text-slate-500">Created by a parent in School Hub on {fmt(item.created_at, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</p>}
+              {sources.length > 1 && <p className="text-xs text-slate-500">Merged from {sources.length} sources describing the same thing.</p>}
+              {sources.map((s, i) => (
+                <figure key={i} className="rounded-xl bg-slate-50 px-3 py-2.5">
+                  {s.evidence && <blockquote className="text-[13px] italic leading-relaxed text-slate-700">“{s.evidence}”</blockquote>}
+                  <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+                    <span className="font-medium">{sourceName(s)}</span>
+                    {s.document && <span>· Received {fmt(s.document.received_at, tz, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>}
+                    {s.document && (
+                      <Link href={`/documents/${s.document.id}`} className="font-medium text-indigo-600">View original</Link>
+                    )}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </details>
         </div>
       </div>
     </article>
