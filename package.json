@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:e2e": "node tests/e2e/m1-family.mjs && node tests/e2e/m2-extraction.mjs && node tests/e2e/m3-m5.mjs",
+    "db:start": "supabase start -x realtime,edge-runtime,logflare,vector,supavisor,studio,postgres-meta,imgproxy",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
