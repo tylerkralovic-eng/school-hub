@@ -10,6 +10,16 @@ import { ALLOWED_MIME, MAX_FILE_BYTES, applyReview, createDocument, processDocum
 import { audit, requireFamily, type FamilyContext } from "@/lib/server/context";
 import { isValidDate, isValidTime } from "@/lib/time";
 
+/** Caps AI usage per parent (cost and abuse protection): 60 documents per hour. */
+async function overLimit(ctx: FamilyContext, adding: number): Promise<boolean> {
+  const { count } = await ctx.supabase
+    .from("source_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("submitted_by", ctx.userId)
+    .gte("created_at", new Date(Date.now() - 3600_000).toISOString());
+  return (count ?? 0) + adding > 60;
+}
+
 function resolveWho(ctx: FamilyContext, who: string | null | undefined): { childId: string | null; schoolId: string | null } {
   if (!who) return { childId: null, schoolId: null };
   if (who.startsWith("school:")) {
@@ -40,6 +50,7 @@ export async function registerUploads(files: z.infer<typeof fileMeta>[], who: st
   const ctx = await requireFamily();
   const parsed = z.array(fileMeta).min(1).max(10).safeParse(files);
   if (!parsed.success) return { error: "Choose up to 10 photos or PDFs (20 MB max each)." };
+  if (await overLimit(ctx, parsed.data.length)) return { error: "You've added a lot in the last hour. Please wait a bit and try again." };
   const { childId, schoolId } = resolveWho(ctx, who);
   const batchId = randomUUID();
   const uploads: RegisteredUpload[] = [];
@@ -81,6 +92,7 @@ export async function submitText(_: ActionState, form: FormData): Promise<Action
   const text = String(form.get("text") ?? "").trim();
   if (text.length < 10) return { error: "Paste a little more of the message." };
   if (text.length > 50_000) return { error: "That's too long — paste up to 50,000 characters." };
+  if (await overLimit(ctx, 1)) return { error: "You've added a lot in the last hour. Please wait a bit and try again." };
   const { childId, schoolId } = resolveWho(ctx, String(form.get("who") ?? ""));
   const doc = await createDocument(ctx.supabase, {
     familyId: ctx.family.id,

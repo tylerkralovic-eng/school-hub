@@ -149,14 +149,14 @@ isOneToOne: false
                   ]
                 },"family_members": {
                   Row: {
-                    "created_at": string,"digest_enabled": boolean,"display_name": string,"email": string,"family_id": string,"role": Database["public"]['Enums']["member_role"],"user_id": string
+                    "created_at": string,"digest_enabled": boolean,"display_name": string,"email": string,"family_id": string,"last_digest_on": string | null,"role": Database["public"]['Enums']["member_role"],"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"digest_enabled"?: boolean,"display_name": string,"email": string,"family_id": string,"role"?: Database["public"]['Enums']["member_role"],"user_id": string
+                    "created_at"?: string,"digest_enabled"?: boolean,"display_name": string,"email": string,"family_id": string,"last_digest_on"?: string | null,"role"?: Database["public"]['Enums']["member_role"],"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"digest_enabled"?: boolean,"display_name"?: string,"email"?: string,"family_id"?: string,"role"?: Database["public"]['Enums']["member_role"],"user_id"?: string
+                    "created_at"?: string,"digest_enabled"?: boolean,"display_name"?: string,"email"?: string,"family_id"?: string,"last_digest_on"?: string | null,"role"?: Database["public"]['Enums']["member_role"],"user_id"?: string
                   }
                   Relationships: [
                     {

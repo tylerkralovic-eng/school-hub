@@ -244,3 +244,11 @@ export async function removeMember(form: FormData) {
   revalidatePath("/", "layout");
   if (userId === ctx.userId) redirect("/onboarding");
 }
+
+export async function rotateCalendarToken() {
+  const ctx = await requireFamily();
+  const token = randomBytes(24).toString("hex");
+  await ctx.supabase.from("families").update({ calendar_token: token }).eq("id", ctx.family.id);
+  await audit(ctx, "calendar.token_rotated");
+  revalidatePath("/connections");
+}
