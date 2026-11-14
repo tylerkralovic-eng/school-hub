@@ -6,8 +6,8 @@ const REQUIRED: [string, string][] = [
   ["NEXT_PUBLIC_SUPABASE_ANON_KEY", "Supabase → Project Settings → API → anon / publishable key"],
   ["SUPABASE_SERVICE_ROLE_KEY", "Supabase → Project Settings → API → service_role key (secret)"],
   ["APP_URL", "This site's address, e.g. https://school-hub.vercel.app"],
-  ["TOKEN_ENCRYPTION_KEY", "Random secret: openssl rand -base64 32"],
-  ["CRON_SECRET", "Random secret: openssl rand -hex 24"],
+  ["TOKEN_ENCRYPTION_KEY", "Any random password, 32+ characters (e.g. from a password manager)"],
+  ["CRON_SECRET", "A different random password, 32+ characters"],
   ["ANTHROPIC_API_KEY", "console.anthropic.com → API keys (needed to read documents)"],
 ];
 

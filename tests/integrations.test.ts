@@ -43,6 +43,14 @@ describe("token encryption", () => {
     parts[3] = Buffer.from("tampered").toString("base64");
     expect(() => decryptSecret(parts.join("."))).toThrow();
   });
+  it("accepts a long passphrase as the key", () => {
+    const prev = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.TOKEN_ENCRYPTION_KEY = "correct horse battery staple, but much longer than that";
+    expect(decryptSecret(encryptSecret("abc"))).toBe("abc");
+    process.env.TOKEN_ENCRYPTION_KEY = "too short";
+    expect(() => encryptSecret("abc")).toThrow(/32 characters/);
+    process.env.TOKEN_ENCRYPTION_KEY = prev;
+  });
 });
 
 describe("reminders", () => {

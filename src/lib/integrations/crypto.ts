@@ -1,12 +1,18 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { env } from "@/lib/env";
 
-/** AES-256-GCM for OAuth refresh tokens at rest. Key: 32 random bytes, base64 (TOKEN_ENCRYPTION_KEY). */
+/**
+ * AES-256-GCM for OAuth refresh tokens at rest. TOKEN_ENCRYPTION_KEY is either
+ * 32 random bytes in base64, or any random passphrase of 32+ characters
+ * (hashed to a 256-bit key) so it can be created without command-line tools.
+ */
 function key(): Buffer {
-  const k = Buffer.from(env.tokenEncryptionKey(), "base64");
-  if (k.length !== 32) throw new Error("TOKEN_ENCRYPTION_KEY must be 32 bytes, base64-encoded");
-  return k;
+  const raw = env.tokenEncryptionKey();
+  const b64 = Buffer.from(raw, "base64");
+  if (b64.length === 32 && /^[A-Za-z0-9+/]{43}=$/.test(raw)) return b64;
+  if (raw.length < 32) throw new Error("TOKEN_ENCRYPTION_KEY must be at least 32 characters");
+  return createHash("sha256").update(raw, "utf8").digest();
 }
 
 export function encryptSecret(plain: string): string {

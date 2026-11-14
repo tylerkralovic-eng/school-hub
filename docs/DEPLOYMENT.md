@@ -7,7 +7,8 @@ Twilio ≈ $1.15/month per number + ~$0.01 per text.
 
 ## 1. Supabase (database, login, file storage)
 1. Create a project at supabase.com (region near you). Save the database password.
-2. Install the CLI locally (`npm install` in this repo already includes it), then:
+2. **Easiest:** Supabase dashboard → **SQL Editor** → New query → paste the whole of
+   `supabase/setup.sql` → **Run** (once, on a new project). Or, with the CLI:
    ```bash
    npx supabase login
    npx supabase link --project-ref <your-project-ref>
@@ -30,8 +31,8 @@ console.anthropic.com → create an API key → add billing → set a monthly sp
 2. Environment Variables: everything in `.env.example` marked Required, plus
    `ANTHROPIC_API_KEY` and `SMTP_URL`/`EMAIL_FROM`. Generate secrets with:
    ```bash
-   openssl rand -base64 32   # TOKEN_ENCRYPTION_KEY
-   openssl rand -hex 24      # CRON_SECRET
+   openssl rand -base64 32   # TOKEN_ENCRYPTION_KEY (or any random password of 32+ characters)
+   openssl rand -hex 24      # CRON_SECRET (or any random password of 32+ characters)
    ```
    Do **not** set `SCHOOLHUB_TEST_MODE` in Vercel.
 3. Deploy, then set `APP_URL` to the final URL and redeploy.

@@ -12,7 +12,8 @@
     "db:start": "supabase start -x realtime,edge-runtime,logflare,vector,supavisor,studio,postgres-meta,imgproxy",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:setup-sql": "for f in supabase/migrations/*.sql; do cat \"$f\"; echo; done > supabase/setup.sql"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
