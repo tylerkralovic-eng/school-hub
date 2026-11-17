@@ -66,7 +66,80 @@ export const PLATFORMS: PlatformInfo[] = [
     suggestedSenders: [],
     directIntegrationNote: "No email notifications. Share screenshots of important announcements.",
   },
+  {
+    key: "classdojo",
+    name: "ClassDojo",
+    purpose: "Classroom messages, photos and behavior points",
+    typicalChannels: ["app", "push", "email"],
+    suggestedSenders: [],
+    directIntegrationNote: "No parent API. Turn on email notifications if available, or share screenshots.",
+  },
+  {
+    key: "parentsquare",
+    name: "ParentSquare",
+    purpose: "School and district messages, forms and sign-ups",
+    typicalChannels: ["email", "sms", "push"],
+    suggestedSenders: [],
+    directIntegrationNote: "Choose email delivery in ParentSquare so Gmail can pick messages up.",
+  },
+  {
+    key: "seesaw",
+    name: "Seesaw",
+    purpose: "Class journal, announcements and messages",
+    typicalChannels: ["app", "push", "email"],
+    suggestedSenders: [],
+    directIntegrationNote: "Announcements may arrive by email; otherwise share screenshots.",
+  },
+  {
+    key: "brightwheel",
+    name: "Brightwheel",
+    purpose: "Childcare check-in, messages, photos and billing",
+    typicalChannels: ["app", "push", "email"],
+    suggestedSenders: [],
+    directIntegrationNote: "Billing and some messages arrive by email; share screenshots of important posts.",
+  },
+  {
+    key: "google_classroom",
+    name: "Google Classroom",
+    purpose: "Assignments and class announcements",
+    typicalChannels: ["email", "app"],
+    suggestedSenders: [],
+    directIntegrationNote: "Guardian email summaries can be read via Gmail.",
+  },
+  {
+    key: "powerschool",
+    name: "PowerSchool",
+    purpose: "Grades, attendance and school notices",
+    typicalChannels: ["email", "app"],
+    suggestedSenders: [],
+    directIntegrationNote: "Grades and attendance are out of scope for V1; school notices by email can be read via Gmail.",
+  },
+  {
+    key: "infinite_campus",
+    name: "Infinite Campus",
+    purpose: "Grades, attendance and school notices",
+    typicalChannels: ["email", "app"],
+    suggestedSenders: [],
+    directIntegrationNote: "Grades and attendance are out of scope for V1; school notices by email can be read via Gmail.",
+  },
 ];
+
+/** Words people use for each platform (for understanding free-text answers). */
+export const PLATFORM_ALIASES: Record<string, string[]> = {
+  myschoolbucks: ["myschoolbucks", "my school bucks", "school bucks", "lunch money"],
+  myparentview: ["myparentview", "my parent view", "parentview", "parent view"],
+  ctls: ["ctls", "cobb teaching", "ctls parent"],
+  remind: ["remind", "remind app", "remind.com"],
+  connectcareworks: ["connectcareworks", "connect care works", "careworks"],
+  kambu: ["kambu"],
+  classdojo: ["classdojo", "class dojo", "dojo"],
+  parentsquare: ["parentsquare", "parent square"],
+  seesaw: ["seesaw", "see saw"],
+  brightwheel: ["brightwheel", "bright wheel"],
+  google_classroom: ["google classroom", "classroom"],
+  powerschool: ["powerschool", "power school"],
+  infinite_campus: ["infinite campus", "campus parent"],
+};
 
 export function platformName(key: string): string {
   return PLATFORMS.find((p) => p.key === key)?.name ?? key;

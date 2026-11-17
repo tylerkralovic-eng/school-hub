@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import fs from "node:fs";
-import { BASE, PASSWORD, assert, done, launch, onboard, signUp, step, uid } from "./lib.mjs";
+import { BASE, assert, done, launch, onboard, signUp, step, uid } from "./lib.mjs";
 
 process.loadEnvFile?.(".env.local");
 const SHOTS = process.env.SHOTS ?? "/tmp";
@@ -159,7 +159,7 @@ await step("parent 2 can't see another family's export or review pages", async (
   await onboard(other, { family: "Other Family", kids: [["Sam", "1", "Elm School"]] });
   const j = await (await other.request.get(BASE + "/api/export")).json();
   assert(!j.items.some((i) => i.title === "Buy poster board"), "LEAK across families");
-  const res = await other.goto(BASE + "/connections");
+  await other.goto(BASE + "/connections");
   assert(!(await other.getByText(PHONE).count()), "LEAK phone");
   // delete that family
   await other.goto(BASE + "/settings/data");

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { ItemCard, WhoChips } from "@/components/ItemCard";
+import { QuickQuestion } from "@/components/QuickQuestion";
+import { nextGap } from "@/lib/server/gaps";
 import { TaskToggle } from "@/components/TaskToggle";
 import { Card, EmptyState, Notice, SectionHeader, buttonClass } from "@/components/ui";
 import { requireFamily } from "@/lib/server/context";
@@ -10,9 +12,9 @@ import { addDays, dueLabel, fmt, fmtTime, todayIn, zonedToUtc } from "@/lib/time
 import { CATEGORY_LABELS } from "@/lib/types";
 
 export const metadata = { title: "Home · School Hub" };
+export const maxDuration = 300; // Quick-question school lookups
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
-  const { welcome } = await searchParams;
+export default async function HomePage() {
   const ctx = await requireFamily();
   const childId = await getChildFilter(ctx);
   const tz = ctx.family.timezone;
@@ -28,13 +30,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     return childId ? q.or(childOrFilter(ctx, childId)) : q;
   };
 
-  const [tasksRes, eventsRes, noticesRes, pendingRes, docsRes] = await Promise.all([
+  const [tasksRes, eventsRes, noticesRes, pendingRes, docsRes, gap] = await Promise.all([
     base().eq("kind", "task").is("completed_at", null).order("due_at", { ascending: true, nullsFirst: false }).limit(30),
     // Events overlapping today..+14d (multi-day events that started earlier included).
     base().not("starts_at", "is", null).lt("starts_at", in14).or(`starts_at.gte.${startToday},ends_at.gte.${startToday}`).order("starts_at").limit(40),
     base().eq("kind", "announcement").order("created_at", { ascending: false }).limit(4),
     ctx.supabase.from("extraction_candidates").select("document_id, source_documents(batch_id)").eq("family_id", ctx.family.id).eq("status", "pending").limit(200),
     ctx.supabase.from("source_documents").select("id", { count: "exact", head: true }).eq("family_id", ctx.family.id),
+    nextGap(ctx),
   ]);
 
   const tasks = (tasksRes.data ?? []) as ItemView[];
@@ -71,9 +74,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       </section>
 
-      {welcome && isEmpty && (
-        <Notice tone="ok" title="You're all set up">Next: snap a photo of a school calendar or newsletter, or connect Gmail.</Notice>
-      )}
+      {gap && <QuickQuestion gap={gap} />}
 
       {pendingBatches.length > 0 && (
         <Link href={pendingBatches.length === 1 ? `/review/${pendingBatches[0]}` : "/add#recent"} className="flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
@@ -89,7 +90,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <Notice key={a.id} tone="warn" title={`${CATEGORY_LABELS[a.category]} today`}>{a.title}</Notice>
       ))}
 
-      {isEmpty ? (
+      {isEmpty && !gap ? (
         <EmptyState
           icon="camera"
           title="Let's add your first school info"

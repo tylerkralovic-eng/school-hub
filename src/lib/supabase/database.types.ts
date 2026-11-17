@@ -115,14 +115,14 @@ isOneToOne: false
                   ]
                 },"families": {
                   Row: {
-                    "calendar_token": string,"created_at": string,"created_by": string | null,"document_retention_days": number | null,"id": string,"name": string,"timezone": string
+                    "calendar_token": string,"context": NonNullable<Json>,"created_at": string,"created_by": string | null,"document_retention_days": number | null,"id": string,"name": string,"timezone": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "calendar_token"?: string,"created_at"?: string,"created_by"?: string | null,"document_retention_days"?: number | null,"id"?: string,"name": string,"timezone"?: string
+                    "calendar_token"?: string,"context"?: NonNullable<Json>,"created_at"?: string,"created_by"?: string | null,"document_retention_days"?: number | null,"id"?: string,"name": string,"timezone"?: string
                   }
                   Update: {
-                    "calendar_token"?: string,"created_at"?: string,"created_by"?: string | null,"document_retention_days"?: number | null,"id"?: string,"name"?: string,"timezone"?: string
+                    "calendar_token"?: string,"context"?: NonNullable<Json>,"created_at"?: string,"created_by"?: string | null,"document_retention_days"?: number | null,"id"?: string,"name"?: string,"timezone"?: string
                   }
                   Relationships: [
                     
@@ -333,14 +333,14 @@ isOneToOne: false
                   ]
                 },"schools": {
                   Row: {
-                    "created_at": string,"family_id": string,"id": string,"name": string,"short_name": string | null
+                    "calendar_url": string | null,"created_at": string,"family_id": string,"id": string,"name": string,"short_name": string | null,"town": string | null,"website": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"family_id": string,"id"?: string,"name": string,"short_name"?: string | null
+                    "calendar_url"?: string | null,"created_at"?: string,"family_id": string,"id"?: string,"name": string,"short_name"?: string | null,"town"?: string | null,"website"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"family_id"?: string,"id"?: string,"name"?: string,"short_name"?: string | null
+                    "calendar_url"?: string | null,"created_at"?: string,"family_id"?: string,"id"?: string,"name"?: string,"short_name"?: string | null,"town"?: string | null,"website"?: string | null
                   }
                   Relationships: [
                     {
@@ -440,7 +440,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "candidate_status": "pending"|"approved"|"rejected","channel": "upload"|"paste"|"share"|"gmail"|"sms"|"manual","document_status": "pending"|"processing"|"needs_review"|"done"|"failed"|"ignored","item_category": "general"|"closure"|"early_dismissal"|"supplies"|"permission_form"|"payment"|"lunch"|"teacher_request"|"activity"|"reminder","item_kind": "event"|"task"|"announcement","member_role": "owner"|"parent"
+            "candidate_status": "pending"|"approved"|"rejected","channel": "upload"|"paste"|"share"|"gmail"|"sms"|"manual"|"web","document_status": "pending"|"processing"|"needs_review"|"done"|"failed"|"ignored","item_category": "general"|"closure"|"early_dismissal"|"supplies"|"permission_form"|"payment"|"lunch"|"teacher_request"|"activity"|"reminder","item_kind": "event"|"task"|"announcement","member_role": "owner"|"parent"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -560,7 +560,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "candidate_status": ["pending", "approved", "rejected"],"channel": ["upload", "paste", "share", "gmail", "sms", "manual"],"document_status": ["pending", "processing", "needs_review", "done", "failed", "ignored"],"item_category": ["general", "closure", "early_dismissal", "supplies", "permission_form", "payment", "lunch", "teacher_request", "activity", "reminder"],"item_kind": ["event", "task", "announcement"],"member_role": ["owner", "parent"]
+            "candidate_status": ["pending", "approved", "rejected"],"channel": ["upload", "paste", "share", "gmail", "sms", "manual", "web"],"document_status": ["pending", "processing", "needs_review", "done", "failed", "ignored"],"item_category": ["general", "closure", "early_dismissal", "supplies", "permission_form", "payment", "lunch", "teacher_request", "activity", "reminder"],"item_kind": ["event", "task", "announcement"],"member_role": ["owner", "parent"]
           }
         }
 } as const

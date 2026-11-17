@@ -201,8 +201,36 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
       <section className="space-y-3">
         <SectionHeader title="School platforms" />
         <p className="px-1 text-sm text-slate-600">School Hub has <b>no direct connection</b> to these apps and never asks for their passwords. It sees their information only when it reaches you by email, text or screenshot.</p>
-        {PLATFORMS.map((p) => {
+        {[...PLATFORMS].sort((a, b) => Number(!platforms.data?.some((x) => x.platform_key === a.key)) - Number(!platforms.data?.some((x) => x.platform_key === b.key))).map((p, i, all) => {
           const fp = platforms.data?.find((x) => x.platform_key === p.key);
+          const firstUnused = !fp && (i === 0 || platforms.data?.some((x) => x.platform_key === all[i - 1].key));
+          if (!fp && !firstUnused) return null;
+          if (firstUnused) {
+            const unused = all.filter((x) => !platforms.data?.some((y) => y.platform_key === x.key));
+            return (
+              <details key="other" className="rounded-2xl border border-slate-200/80 bg-white p-4">
+                <summary className="cursor-pointer text-[15px] font-semibold text-slate-800">Other platforms ({unused.length})</summary>
+                <ul className="mt-2 divide-y divide-slate-100">
+                  {unused.map((u) => (
+                    <li key={u.key} className="py-2">
+                      <details>
+                        <summary className="flex cursor-pointer items-center justify-between text-sm [&::-webkit-details-marker]:hidden"><span><b>{u.name}</b> <span className="text-slate-500">· {u.purpose}</span></span><span className="shrink-0 text-xs font-semibold text-indigo-600">We use this</span></summary>
+                        <ActionForm action={savePlatform} className="mt-2 space-y-2">
+                          <input type="hidden" name="platform" value={u.key} />
+                          <fieldset><legend className="text-xs font-medium text-slate-600">For</legend>
+                            <div className="mt-1 flex flex-wrap gap-3">{ctx.children.map((c) => <label key={c.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" name="child" value={c.id} className="h-4 w-4 accent-indigo-600" />{c.first_name}</label>)}</div>
+                          </fieldset>
+                          <fieldset><legend className="text-xs font-medium text-slate-600">It notifies us by</legend>
+                            <div className="mt-1 flex flex-wrap gap-3">{["email", "sms", "push", "app"].map((ch) => <label key={ch} className="flex items-center gap-1.5 text-sm"><input type="checkbox" name="channel" value={ch} defaultChecked={u.typicalChannels.includes(ch as "email")} className="h-4 w-4 accent-indigo-600" />{ch === "sms" ? "Text" : ch === "push" ? "Push" : ch === "app" ? "In app only" : "Email"}</label>)}</div>
+                          </fieldset>
+                        </ActionForm>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            );
+          }
           const channels = fp?.notification_channels ?? [];
           const cov = platformCoverage({ channels, gmailConnected: anyGmail, hasSenderRule: (rules.data ?? []).some((r) => r.platform_key === p.key), smsReady: features.sms(), phoneLinked: anyPhone });
           const lastSeen = lastByPlatform.data?.find((d) => d.platform_key === p.key)?.received_at;

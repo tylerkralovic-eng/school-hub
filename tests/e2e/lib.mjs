@@ -46,6 +46,7 @@ export async function signUp(page, email, next) {
 
 export async function onboard(page, { family = "Test Family", me = "Tyler", kids = [["Everley", "2nd", "Maple Elementary"], ["Adler", "Pre-K", "Little Oaks Preschool"]] } = {}) {
   await page.waitForURL("**/onboarding");
+  await page.goto(`${BASE}/onboarding/form`); // classic form (the conversation is tested in onboarding-chat.mjs)
   await page.getByLabel("Family name").fill(family);
   await page.getByLabel("Your first name").fill(me);
   for (let i = 0; i < kids.length; i++) {

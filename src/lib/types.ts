@@ -43,4 +43,5 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
   gmail: "Gmail",
   sms: "Text message",
   manual: "Added by hand",
+  web: "School website",
 };

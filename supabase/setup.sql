@@ -1,8 +1,4 @@
--- School Hub database setup (all migrations combined).
--- Paste into Supabase → SQL Editor → New query → Run. Run once on a new project.
--- Generated from supabase/migrations; re-generate with: npm run db:setup-sql
-
--- ===== supabase/migrations/20261113000001_core_schema.sql
+-- School Hub database setup (all migrations combined). Paste into Supabase → SQL Editor → Run, once, on a new project.
 -- School Hub core schema.
 -- Every family-owned table carries family_id and is protected by Row Level
 -- Security: a signed-in user can only touch rows of families they belong to.
@@ -473,6 +469,14 @@ begin
 end $$;
 create trigger item_sources_item before insert or update on public.item_sources for each row execute function public.check_item_source_item();
 
--- ===== supabase/migrations/20261113000002_reminders.sql
 -- Daily digest bookkeeping (one email per member per local day).
 alter table public.family_members add column if not exists last_digest_on date;
+
+-- Conversational onboarding: richer school info, family context, web-sourced documents.
+alter type public.channel add value if not exists 'web';
+alter table public.schools add column if not exists website text;
+alter table public.schools add column if not exists calendar_url text;
+alter table public.schools add column if not exists town text;
+-- What the family told us (how they hear from school, pain points). Used to tailor prompts.
+alter table public.families add column if not exists context jsonb not null default '{}';
+
