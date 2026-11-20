@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PREFIXES = ["/login", "/signup", "/auth", "/invite", "/api/inbound", "/api/cron", "/api/calendar", "/api/ingest", "/privacy", "/manifest.webmanifest", "/sw.js", "/icons"];
+const PUBLIC_PREFIXES = ["/api/contact", "/login", "/signup", "/auth", "/invite", "/api/inbound", "/api/cron", "/api/calendar", "/api/ingest", "/privacy", "/manifest.webmanifest", "/sw.js", "/icons"];
 
 export async function middleware(request: NextRequest) {
   // Not configured yet (e.g. a fresh Vercel deploy): show the setup page instead of crashing.

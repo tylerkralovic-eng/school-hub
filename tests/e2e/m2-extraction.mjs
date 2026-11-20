@@ -77,7 +77,7 @@ await step("a PDF can be uploaded", async () => {
 
 await step("pasted text goes through the same pipeline, with duplicate detection", async () => {
   await p.goto(BASE + "/add");
-  await p.getByRole("tab", { name: "Paste text" }).click();
+  await p.getByRole("tab", { name: "Type or say it" }).click();
   const d = new Date(Date.now() + 3 * 86400000);
   const mon = d.toLocaleDateString("en-US", { month: "short", timeZone: "America/New_York" });
   const day = d.toLocaleDateString("en-US", { day: "numeric", timeZone: "America/New_York" });

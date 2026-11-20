@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useActionState, useRef, useState } from "react";
 import { processBatch, registerUploads, submitText } from "@/app/actions/ingest";
 import { Icon } from "@/components/Icon";
+import { MicIcon } from "@/components/onboarding/MicIcon";
+import { useVoice } from "@/components/onboarding/useVoice";
 import { FormError, SubmitButton } from "@/components/forms";
 import { Card, buttonClass, inputClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/browser";
@@ -65,6 +67,8 @@ export function AddForm({ who, aiReady }: { who: Who[]; aiReady: boolean }) {
   const [phase, setPhase] = useState<null | string>(null);
   const [error, setError] = useState<string | null>(null);
   const [textState, textAction] = useActionState(submitText, undefined);
+  const [text, setText] = useState("");
+  const voice = useVoice();
   const cameraRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef<HTMLInputElement>(null);
 
@@ -123,13 +127,13 @@ export function AddForm({ who, aiReady }: { who: Who[]; aiReady: boolean }) {
     <div className="space-y-5">
       {!aiReady && (
         <p role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-950">
-          AI extraction isn&apos;t configured on this server yet, so files can&apos;t be read. Add an ANTHROPIC_API_KEY to enable it.
+          Reading documents isn&apos;t switched on yet for this School Hub. (Owner: add ANTHROPIC_API_KEY in Vercel and redeploy.)
         </p>
       )}
       <div role="tablist" aria-label="What are you adding?" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-200/70 p-1">
         {(["files", "text"] as const).map((m) => (
           <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`rounded-lg py-2 text-sm font-semibold ${mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
-            {m === "files" ? "Photo or PDF" : "Paste text"}
+            {m === "files" ? "Photo or PDF" : "Type or say it"}
           </button>
         ))}
       </div>
@@ -198,7 +202,14 @@ export function AddForm({ who, aiReady }: { who: Who[]; aiReady: boolean }) {
         <form action={textAction} className="space-y-3">
           <input type="hidden" name="who" value={target} />
           <label htmlFor="paste" className="sr-only">Message text</label>
-          <textarea id="paste" name="text" rows={9} required placeholder="Paste a teacher email, a Remind message, a text from school…" className={`${inputClass} resize-y leading-relaxed`} />
+          <div className="relative">
+            <textarea id="paste" name="text" rows={8} required value={text} onChange={(e) => setText(e.target.value)} placeholder={voice.canListen ? "Paste a school message — or tap the mic and say it: “Everley needs a costume for Friday's parade.”" : "Paste a teacher email, a Remind message, a text from school…"} className={`${inputClass} resize-y pb-14 leading-relaxed`} />
+            {voice.canListen && (
+              <button type="button" onClick={() => { const before = text ? text.trimEnd() + " " : ""; voice.listen((t) => setText(before + t)); }} aria-label={voice.listening ? "Stop listening" : "Say it"} className={`absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full ${voice.listening ? "animate-pulse bg-rose-500 text-white" : "bg-indigo-600 text-white"}`}>
+                <MicIcon />
+              </button>
+            )}
+          </div>
           <FormError message={textState?.error} />
           <SubmitButton className="w-full" pendingText="Reading with AI…" disabled={!aiReady}>Find dates & to-dos</SubmitButton>
         </form>

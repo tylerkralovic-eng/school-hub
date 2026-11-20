@@ -71,23 +71,28 @@ await step("inbox lists the item with its source and filters by type", async () 
 
 await step("connections page is honest about what isn't set up", async () => {
   await p1.goto(BASE + "/connections");
-  await p1.getByRole("heading", { name: "Gmail" }).waitFor();
-  assert(await p1.getByText("Not set up").first().isVisible(), "gmail should show Not set up");
-  assert(await p1.getByText("no direct connection").isVisible(), "platform disclaimer missing");
+  await p1.getByRole("heading", { name: "Connect", exact: true }).waitFor();
+  assert(await p1.getByText(/Coming soon to your School Hub: .*reading Gmail/).isVisible(), "should say Gmail isn't available yet");
+  assert(!(await p1.getByText("Connect Gmail").count()), "Gmail button shown although not configured");
   await p1.screenshot({ path: SHOTS + "/m5-connections.png", fullPage: true });
 });
 
 let code;
 await step("SMS: parent links a phone by texting a code", async () => {
   await p1.getByRole("button", { name: "Link my phone" }).click();
-  const t = await p1.getByText(/From your phone, text/).textContent();
-  code = t.match(/LINK \d{6}/)[0];
+  const link = p1.getByRole("link", { name: "Open Messages and send" });
+  await link.waitFor();
+  const href = await link.getAttribute("href");
+  assert(href.startsWith("sms:+15555550100?&body=LINK%20"), "sms link not prefilled: " + href);
+  code = decodeURIComponent(href.split("body=")[1]);
   const bad = await twilioPost({ From: PHONE, Body: code, MessageSid: "SMx1" }, { badSig: true });
   assert(bad.status === 403, "bad signature accepted");
   const res = await twilioPost({ From: PHONE, Body: code, MessageSid: "SMlink1" });
   assert((await res.text()).includes("Linked"), "link reply missing");
-  await p1.reload();
-  await p1.getByText(`${PHONE} is linked`).waitFor();
+  await p1.getByRole("heading", { name: "Text School Hub anything" }).waitFor({ timeout: 15000 }); // flips by itself
+  assert((await p1.getByRole("link", { name: /Text \(555\) 555-0100/ }).getAttribute("href")) === "sms:+15555550100", "text link wrong");
+  const vcf = await p1.request.get(BASE + "/api/contact");
+  assert((await vcf.text()).includes("TEL;TYPE=CELL:+15555550100"), "vCard missing number");
 });
 
 await step("SMS: forwarded school text is ingested; unknown numbers are ignored", async () => {
@@ -111,9 +116,9 @@ await step("SMS: forwarded school text is ingested; unknown numbers are ignored"
 let key;
 await step("Shortcut key: create once, then share text via the API", async () => {
   await p1.goto(BASE + "/connections");
-  await p1.getByText(/iPhone Shortcut keys/).click();
+  await p1.getByText("Advanced settings").click();
   await p1.getByLabel("Key name").fill("Test iPhone");
-  await p1.getByRole("button", { name: "Create key" }).click();
+  await p1.getByRole("button", { name: "Create Shortcut key" }).click();
   key = await p1.getByLabel("Invitation link").inputValue(); // ActionForm's copy box
   assert(key.startsWith("shk_"), "no key");
   const unauth = await fetch(BASE + "/api/ingest", { method: "POST", headers: { Authorization: "Bearer shk_wrong" }, body: "x" });
@@ -133,6 +138,7 @@ await step("Shortcut key: create once, then share text via the API", async () =>
 
 await step("calendar subscription feed works and is private", async () => {
   await p1.goto(BASE + "/connections");
+  await p1.getByText("Advanced settings").click();
   const url = await p1.getByLabel("Calendar link").inputValue();
   const ics = await (await fetch(url.replace(process.env.APP_URL, BASE))).text();
   assert(ics.startsWith("BEGIN:VCALENDAR"), "not ics");

@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getConnectStatus, type ConnectStatus } from "@/app/actions/connections";
 import { applyOnboarding, researchOne, understandAnswer, type OnboardingPlan } from "@/app/actions/onboarding";
+import { ConnectSteps } from "@/components/ConnectSteps";
+import { MicIcon } from "@/components/onboarding/MicIcon";
 import { Icon } from "@/components/Icon";
 import { Typewriter } from "@/components/onboarding/Typewriter";
 import { useVoice } from "@/components/onboarding/useVoice";
@@ -196,13 +199,20 @@ export function Conversation({ aiReady }: { aiReady: boolean }) {
   );
 }
 
-function MicIcon() {
+/** "Make it automatic" — one-tap connections right after setup. */
+function LiveConnect() {
+  const [status, setStatus] = useState<ConnectStatus | null>(null);
+  useEffect(() => { getConnectStatus().then(setStatus).catch(() => setStatus(null)); }, []);
+  if (!status) return null;
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
-      <rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-    </svg>
+    <div className="mt-8 w-full text-left">
+      <h2 className="mb-1 text-lg font-semibold">Make it automatic</h2>
+      <p className="mb-3 text-sm text-slate-500">Each takes one tap. You can do these later in Connect.</p>
+      <ConnectSteps initial={status} />
+    </div>
   );
 }
+
 
 function uniqueSchools(s: OnboardingState) {
   const map = new Map<string, { key: string; school: string; town: string | null; grade: string | null }>();
@@ -305,6 +315,7 @@ function Summary({ state, research, phase, result, onApply, onEdit, onFinish, er
             </div>
           </div>
         )}
+        <LiveConnect />
         <button type="button" onClick={onFinish} className={`${buttonClass.primary} mt-8 w-full !py-3.5 text-base`}>Open School Hub</button>
       </div>
     );

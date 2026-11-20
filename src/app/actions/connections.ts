@@ -3,6 +3,7 @@
 import { randomBytes, createHash, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/forms";
+import { env, features } from "@/lib/env";
 import { decryptSecret } from "@/lib/integrations/crypto";
 import { revokeToken } from "@/lib/integrations/gmail";
 import { syncConnection } from "@/lib/integrations/gmail-sync";
@@ -93,13 +94,37 @@ export async function removePlatform(form: FormData) {
 // ------------------------------------------------------------------ SMS phone linking
 
 /** Starts phone linking: the parent texts this code FROM their phone TO School Hub's number. */
-export async function startPhoneLink() {
+export async function startPhoneLink(): Promise<{ code: string }> {
   const ctx = await requireFamily();
   const code = `LINK ${randomInt(100000, 999999)}`;
   const db = createAdminClient();
   await db.from("member_phones").delete().eq("user_id", ctx.userId).is("verified_at", null);
   await db.from("member_phones").insert({ family_id: ctx.family.id, user_id: ctx.userId, verification_code: code, code_expires_at: new Date(Date.now() + 30 * 60_000).toISOString() });
-  revalidatePath("/connections");
+  return { code };
+}
+
+export interface ConnectStatus {
+  sms: { number: string; linkedPhone: string | null; pendingCode: string | null } | null; // null = not available on this server
+  gmail: { connectedEmail: string | null; needsReconnect: boolean } | null;
+  icsUrl: string;
+  appUrl: string;
+}
+
+/** Everything the one-tap connect steps need, for the signed-in parent. */
+export async function getConnectStatus(): Promise<ConnectStatus> {
+  const ctx = await requireFamily();
+  const [phones, gmail] = await Promise.all([
+    ctx.supabase.from("member_phones").select("phone_e164, verified_at, verification_code, code_expires_at").eq("user_id", ctx.userId),
+    ctx.supabase.from("gmail_connections").select("google_email, status").eq("user_id", ctx.userId).maybeSingle(),
+  ]);
+  const linked = (phones.data ?? []).find((p) => p.verified_at);
+  const pending = (phones.data ?? []).find((p) => !p.verified_at && p.code_expires_at && new Date(p.code_expires_at) > new Date());
+  return {
+    sms: features.sms() ? { number: env.twilioPhoneNumber()!, linkedPhone: linked?.phone_e164 ?? null, pendingCode: pending?.verification_code ?? null } : null,
+    gmail: features.gmail() ? { connectedEmail: gmail.data?.status === "connected" ? gmail.data.google_email : null, needsReconnect: gmail.data?.status === "error" } : null,
+    icsUrl: `${env.appUrl()}/api/calendar/${ctx.family.calendar_token}.ics`,
+    appUrl: env.appUrl(),
+  };
 }
 
 export async function unlinkPhone(form: FormData) {

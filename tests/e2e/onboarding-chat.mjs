@@ -61,6 +61,8 @@ await step("approve → live within seconds, with an invite link", async () => {
   await p.getByRole("heading", { name: "You're live!" }).waitFor({ timeout: 60000 });
   console.log(`     (setup took ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   inviteLink = await p.getByLabel("Invitation link").inputValue();
+  await p.getByRole("heading", { name: "Make it automatic" }).waitFor();
+  assert(await p.getByRole("button", { name: "Link my phone" }).isVisible(), "one-tap texting missing");
   assert(inviteLink.includes("/invite/"), "no invite link");
   await p.screenshot({ path: SHOTS + "/chat-live.png", fullPage: true });
   await p.getByRole("button", { name: "Open School Hub" }).click();
@@ -72,8 +74,9 @@ await step("the app is already loaded: kids, school dates, platforms", async () 
   await p.goto(BASE + "/calendar");
   await p.getByText("[Test] Teacher workday – no school").first().waitFor();
   await p.goto(BASE + "/connections");
-  await p.getByRole("heading", { name: "Remind" }).waitFor();
-  await p.getByText(/School senders \(\d+\)/).click();
+  await p.getByText("Your school apps").waitFor();
+  assert(await p.getByText(/^Remind/).first().isVisible(), "Remind missing from school apps");
+  await p.getByText("Advanced settings").click();
   assert(await p.getByText("@example.org", { exact: true }).isVisible(), "school email domain rule missing");
   assert(await p.getByText("@remind.com", { exact: true }).isVisible(), "Remind sender rule missing");
   await p.screenshot({ path: SHOTS + "/chat-home.png", fullPage: true });
