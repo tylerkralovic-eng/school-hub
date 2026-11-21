@@ -6,7 +6,7 @@ import { CheckIn } from "@/components/behavior/CheckIn";
 import { DayEditor } from "@/components/behavior/DayEditor";
 import { Icon } from "@/components/Icon";
 import { Card, ChildAvatar, EmptyState, Field, Notice, PageTitle, buttonClass, inputClass } from "@/components/ui";
-import { currentStreak, monthStart, streakLabel, sumPoints, weekdaysBetween } from "@/lib/behavior";
+import { choicesFor, countPointsMap, currentStreak, monthStart, streakLabel, sumPoints, weekdaysBetween } from "@/lib/behavior";
 import { requireFamily } from "@/lib/server/context";
 import { clientChoices, loadBehavior, shapeOf } from "@/lib/server/behavior";
 import { getChildFilter } from "@/lib/server/filters";
@@ -117,7 +117,7 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
                     <label className="flex items-center gap-1.5"><input type="radio" name="horizon" value="big" className="accent-indigo-600" />Big (saves up)</label>
                   </fieldset>
                   <Field label="Prize" htmlFor={`pt-${kid.id}`}><input id={`pt-${kid.id}`} name="title" required placeholder="e.g. Pick Friday's movie" className={inputClass} /></Field>
-                  <Field label="Points needed" htmlFor={`pg-${kid.id}`} hint={s.kind === "count" ? `A perfect week is ${(s.count_max ?? 3) * 5} points.` : `A perfect week is ${(s.levels[0]?.points ?? 0) * 5} points; a normal good week about ${(s.levels[1]?.points ?? 0) * 5}.`}>
+                  <Field label="Points needed" htmlFor={`pg-${kid.id}`} hint={`A perfect week is ${(choicesFor(s)[0]?.points ?? 0) * 5} points${s.kind === "levels" && s.levels[1] ? `; a normal good week about ${s.levels[1].points * 5}` : ""}.`}>
                     <input id={`pg-${kid.id}`} name="points_goal" type="number" min={1} required className={inputClass} />
                   </Field>
                 </ActionForm>
@@ -129,17 +129,23 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
               <ActionForm action={saveTrackingSettings} className="mt-3 space-y-3">
                 <input type="hidden" name="child_id" value={kid.id} />
                 <Field label="Ask after pick-up at" htmlFor={`ct-${kid.id}`}><input id={`ct-${kid.id}`} type="time" name="check_in_time" defaultValue={s.check_in_time?.slice(0, 5) ?? "15:00"} className={inputClass} /></Field>
-                {s.kind === "levels" && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-700">Points per day</p>
-                    {s.levels.map((l) => (
-                      <label key={l.key} className="flex items-center justify-between gap-3 text-sm">
-                        <span>{l.label}{l.meaning ? <span className="text-slate-500"> · {l.meaning}</span> : null}</span>
-                        <input type="number" name={`points.${l.key}`} min={0} max={10} defaultValue={l.points} className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-right" aria-label={`Points for ${l.label}`} />
-                      </label>
-                    ))}
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-slate-700">Points per day <span className="font-normal text-slate-500">(use a minus number to take points away)</span></p>
+                  {s.kind === "levels"
+                    ? s.levels.map((l) => (
+                        <label key={l.key} className="flex items-center justify-between gap-3 text-sm">
+                          <span>{l.label}{l.meaning ? <span className="text-slate-500"> · {l.meaning}</span> : null}</span>
+                          <input type="number" name={`points.${l.key}`} min={-10} max={10} defaultValue={l.points} className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-right" aria-label={`Points for ${l.label}`} />
+                        </label>
+                      ))
+                    : Object.entries(countPointsMap(s.count_max ?? 3, s.count_points)).sort((a, b) => Number(b[0]) - Number(a[0])).map(([n, p]) => (
+                        <label key={n} className="flex items-center justify-between gap-3 text-sm">
+                          <span>{n} {s.count_unit ?? "kept"}</span>
+                          <input type="number" name={`cpoints.${n}`} min={-10} max={10} defaultValue={p} className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-right" aria-label={`Points for ${n} ${s.count_unit ?? "kept"}`} />
+                        </label>
+                      ))}
+                  <p className="text-xs text-slate-500">Changing points re-scores days already logged.</p>
+                </div>
               </ActionForm>
               <div className="mt-3 flex gap-4 text-sm">
                 <Link href="/points/setup" className="font-semibold text-indigo-600">Describe it again</Link>

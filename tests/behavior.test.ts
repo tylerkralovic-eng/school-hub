@@ -61,3 +61,35 @@ describe("understanding a description without AI", () => {
     expect(a).toMatchObject({ kind: "count", count_max: 3, count_unit: "Skittles" });
   });
 });
+
+import { countPointsMap, formatPoints, withWorstPenalty } from "@/lib/behavior";
+describe("negative points", () => {
+  it("rough days can cost points, for levels and counts", () => {
+    const e = withWorstPenalty(stars, 2);
+    expect(e.levels.map((l) => l.points)).toEqual([3, 2, 1, -2]);
+    const a = withWorstPenalty(skittles, 2);
+    expect(choicesFor(a).map((c) => [c.key, c.points])).toEqual([["3", 3], ["2", 2], ["1", 1], ["0", -2]]);
+    expect(withWorstPenalty(a, 0).count_points!["0"]).toBe(0);
+  });
+  it("totals go below zero and points read naturally", () => {
+    const entries = [{ child_id: "a", day: "2026-11-02", level_key: null, count: 0, points: -2 }, { child_id: "a", day: "2026-11-03", level_key: null, count: 0, points: -2 }];
+    expect(sumPoints(entries, "a", "2026-11-01", "2026-11-30")).toBe(-4);
+    expect(formatPoints(3)).toBe("+3");
+    expect(formatPoints(-2)).toBe("−2");
+    expect(countPointsMap(3, { "0": -50 })["0"]).toBe(-10); // clamped
+  });
+});
+
+describe("setup understands penalties and notices when points weren't given", () => {
+  const kids = [{ first_name: "Everley" }, { first_name: "Adler" }];
+  it("asks when no points were said", () => {
+    const r = heuristicParse("Everley gets stars: white is normal, yellow talked to, red is bad, purple superb. Adler keeps 3 skittles, 3 is best.", kids);
+    expect(r.systems.every((s) => s.points_stated === false)).toBe(true);
+  });
+  it("applies 'minus 2' to each child's worst outcome", () => {
+    const r = heuristicParse("Everley gets stars: purple superb, white normal, yellow talked to, red bad. Adler keeps 3 skittles. Red star or 0 skittles is minus 2 points.", kids);
+    expect(r.systems.find((s) => s.child_name === "Everley")!.levels.at(-1)).toMatchObject({ label: "Red", points: -2 });
+    expect(r.systems.find((s) => s.child_name === "Adler")!.count_points).toEqual([{ count: 0, points: -2 }]);
+    expect(r.systems.every((s) => s.points_stated)).toBe(true);
+  });
+});

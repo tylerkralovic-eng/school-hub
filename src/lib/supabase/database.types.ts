@@ -469,14 +469,14 @@ isOneToOne: false
                   ]
                 },"tracking_systems": {
                   Row: {
-                    "check_in_time": string | null,"child_id": string,"count_max": number | null,"count_unit": string | null,"created_at": string,"description": string | null,"family_id": string,"id": string,"kind": string,"levels": NonNullable<Json>,"name": string,"updated_at": string
+                    "check_in_time": string | null,"child_id": string,"count_max": number | null,"count_points": Json | null,"count_unit": string | null,"created_at": string,"description": string | null,"family_id": string,"id": string,"kind": string,"levels": NonNullable<Json>,"name": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "check_in_time"?: string | null,"child_id": string,"count_max"?: number | null,"count_unit"?: string | null,"created_at"?: string,"description"?: string | null,"family_id": string,"id"?: string,"kind": string,"levels"?: NonNullable<Json>,"name": string,"updated_at"?: string
+                    "check_in_time"?: string | null,"child_id": string,"count_max"?: number | null,"count_points"?: Json | null,"count_unit"?: string | null,"created_at"?: string,"description"?: string | null,"family_id": string,"id"?: string,"kind": string,"levels"?: NonNullable<Json>,"name": string,"updated_at"?: string
                   }
                   Update: {
-                    "check_in_time"?: string | null,"child_id"?: string,"count_max"?: number | null,"count_unit"?: string | null,"created_at"?: string,"description"?: string | null,"family_id"?: string,"id"?: string,"kind"?: string,"levels"?: NonNullable<Json>,"name"?: string,"updated_at"?: string
+                    "check_in_time"?: string | null,"child_id"?: string,"count_max"?: number | null,"count_points"?: Json | null,"count_unit"?: string | null,"created_at"?: string,"description"?: string | null,"family_id"?: string,"id"?: string,"kind"?: string,"levels"?: NonNullable<Json>,"name"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {

@@ -549,3 +549,7 @@ create trigger rewards_child before insert or update on public.rewards for each 
 create trigger tracking_systems_touch before update on public.tracking_systems for each row execute function public.touch_updated_at();
 create trigger behavior_entries_touch before update on public.behavior_entries for each row execute function public.touch_updated_at();
 
+-- Points per count value (e.g. {"0": -2, "1": 1, "2": 2, "3": 3}) so a count
+-- system can take points away on a rough day. Null = points equal the count.
+alter table public.tracking_systems add column if not exists count_points jsonb;
+

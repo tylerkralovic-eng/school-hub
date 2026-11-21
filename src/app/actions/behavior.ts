@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionState } from "@/components/forms";
-import { choiceFor, normalizeColor, type TrackingSystem } from "@/lib/behavior";
+import { POINT_MAX, POINT_MIN, choiceFor, clampPoints, countPointsMap, normalizeColor, type TrackingSystem } from "@/lib/behavior";
 import { parseTrackingDescription, type ParsedSystem } from "@/lib/behavior-ai";
 import { audit, requireFamily } from "@/lib/server/context";
 import { addDays, isValidDate, isValidTime, todayIn } from "@/lib/time";
@@ -18,7 +18,7 @@ export async function understandTracking(text: string): Promise<{ systems?: Pars
   return { systems };
 }
 
-const LevelSchema = z.object({ key: z.string().min(1).max(40), label: z.string().min(1).max(24), color: z.string(), meaning: z.string().max(80), points: z.number().int().min(0).max(10) });
+const LevelSchema = z.object({ key: z.string().min(1).max(40), label: z.string().min(1).max(24), color: z.string(), meaning: z.string().max(80), points: z.number().int().min(POINT_MIN).max(POINT_MAX) });
 const SystemSchema = z.object({
   child_id: z.string().uuid(),
   name: z.string().trim().min(1).max(60),
@@ -27,6 +27,7 @@ const SystemSchema = z.object({
   count_max: z.number().int().min(1).max(20).nullable(),
   count_unit: z.string().max(30).nullable(),
   check_in_time: z.string().nullable(),
+  count_points: z.record(z.string().regex(/^\d{1,2}$/), z.number().int().min(POINT_MIN).max(POINT_MAX)).nullable().optional(),
 });
 
 /** Step 2: save the approved systems (one per child). */
@@ -45,6 +46,7 @@ export async function saveTracking(systems: z.infer<typeof SystemSchema>[], desc
       levels: s.kind === "levels" ? s.levels.map((l) => ({ ...l, color: normalizeColor(l.color) })) : [],
       count_max: s.kind === "count" ? s.count_max ?? 3 : null,
       count_unit: s.kind === "count" ? s.count_unit : null,
+      count_points: s.kind === "count" ? countPointsMap(s.count_max ?? 3, s.count_points ?? null) : null,
       check_in_time: s.check_in_time && isValidTime(s.check_in_time.slice(0, 5)) ? s.check_in_time.slice(0, 5) : "15:00",
       description: description.slice(0, 2000),
     }, { onConflict: "child_id" });
@@ -91,13 +93,19 @@ export async function saveTrackingSettings(_: ActionState, form: FormData): Prom
   if (!sys) return { error: "Not found" };
   const time = String(form.get("check_in_time") ?? "");
   if (time && !isValidTime(time)) return { error: "Enter a valid time" };
-  const levels = (sys.levels as unknown as { key: string; points: number }[]).map((l) => {
-    const p = Number(form.get(`points.${l.key}`));
-    return { ...l, points: Number.isInteger(p) && p >= 0 && p <= 10 ? p : l.points };
-  });
-  await ctx.supabase.from("tracking_systems").update({ check_in_time: time || sys.check_in_time, levels }).eq("id", sys.id);
-  // Recompute stored points for level systems so totals stay consistent.
+  const read = (name: string, fallback: number) => {
+    const v = form.get(name);
+    const p = Number(v);
+    return v !== null && v !== "" && Number.isInteger(p) ? clampPoints(p) : fallback;
+  };
+  const levels = (sys.levels as unknown as { key: string; points: number }[]).map((l) => ({ ...l, points: read(`points.${l.key}`, l.points) }));
+  const max = sys.count_max ?? 3;
+  const current = countPointsMap(max, sys.count_points as Record<string, number> | null);
+  const countPoints = sys.kind === "count" ? Object.fromEntries(Object.entries(current).map(([n, p]) => [n, read(`cpoints.${n}`, p)])) : null;
+  await ctx.supabase.from("tracking_systems").update({ check_in_time: time || sys.check_in_time, levels, count_points: countPoints }).eq("id", sys.id);
+  // Re-score days already logged so totals match the new values.
   if (sys.kind === "levels") for (const l of levels) await ctx.supabase.from("behavior_entries").update({ points: l.points }).eq("child_id", childId).eq("level_key", l.key);
+  else for (const [n, p] of Object.entries(countPoints!)) await ctx.supabase.from("behavior_entries").update({ points: p }).eq("child_id", childId).eq("count", Number(n));
   revalidatePath("/", "layout");
   return { ok: "Saved" };
 }

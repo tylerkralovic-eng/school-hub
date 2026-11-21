@@ -15,6 +15,31 @@ export interface TrackingSystem {
   count_max: number | null;
   count_unit: string | null;
   check_in_time: string | null; // "HH:MM" or "HH:MM:SS"
+  /** Points per count ("0": -2, "3": 3…). Missing = the count itself. */
+  count_points?: Record<string, number> | null;
+}
+
+/** Points can be negative so a rough day can cost something. */
+export const POINT_MIN = -10;
+export const POINT_MAX = 10;
+export const clampPoints = (n: number) => Math.max(POINT_MIN, Math.min(POINT_MAX, Math.round(Number.isFinite(n) ? n : 0)));
+
+/** "+3", "−2", "0" */
+export function formatPoints(n: number): string {
+  return n > 0 ? `+${n}` : n < 0 ? `\u2212${Math.abs(n)}` : "0";
+}
+
+/** Points for each count value, 0..max (defaults to the count itself). */
+export function countPointsMap(max: number, given?: Record<string, number> | null): Record<string, number> {
+  return Object.fromEntries(Array.from({ length: max + 1 }, (_, n) => [String(n), clampPoints(given?.[String(n)] ?? n)]));
+}
+
+/** Makes the worst outcome cost `penalty` points (0 = no minus points). */
+export function withWorstPenalty<T extends Pick<TrackingSystem, "kind" | "levels" | "count_max" | "count_points">>(s: T, penalty: number): T {
+  const p = penalty > 0 ? -penalty : 0;
+  if (s.kind === "count") return { ...s, count_points: { ...countPointsMap(s.count_max ?? 3, s.count_points), "0": clampPoints(p) } };
+  if (!s.levels.length) return s;
+  return { ...s, levels: s.levels.map((l, i) => (i === s.levels.length - 1 ? { ...l, points: clampPoints(p) } : l)) };
 }
 export interface Entry { child_id: string; day: string; level_key: string | null; count: number | null; points: number; note?: string | null }
 
@@ -57,8 +82,9 @@ export function countColor(n: number, max: number): string {
 export function choicesFor(s: TrackingSystem): Choice[] {
   if (s.kind === "count") {
     const max = s.count_max ?? 3;
+    const pts = countPointsMap(max, s.count_points);
     return Array.from({ length: max + 1 }, (_, i) => max - i).map((n) => ({
-      key: String(n), label: String(n), color: countColor(n, max), stroke: countColor(n, max), points: n, ratio: max ? n / max : 0,
+      key: String(n), label: String(n), color: countColor(n, max), stroke: countColor(n, max), points: pts[String(n)], ratio: max ? n / max : 0,
       meaning: n === max ? "Best" : n === 0 ? "Rough day" : "",
     }));
   }

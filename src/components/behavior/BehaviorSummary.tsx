@@ -15,7 +15,7 @@ export function rewardProgress(r: Reward, entries: Entry[], today: string) {
   const from = r.horizon === "week" ? week[0] : r.starts_on;
   const to = r.horizon === "week" ? week[4] : today;
   const pts = sumPoints(entries, r.child_id, from, to);
-  return { pts, pct: Math.min(100, Math.round((pts / r.points_goal) * 100)), done: pts >= r.points_goal };
+  return { pts, pct: Math.max(0, Math.min(100, Math.round((pts / r.points_goal) * 100))), done: pts >= r.points_goal };
 }
 
 /** Home card: how each child's school days are going, per their school's own system. */
