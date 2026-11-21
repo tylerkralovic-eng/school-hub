@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { ItemCard, WhoChips } from "@/components/ItemCard";
 import { QuickQuestion } from "@/components/QuickQuestion";
+import { BehaviorSummary } from "@/components/behavior/BehaviorSummary";
+import { loadBehavior } from "@/lib/server/behavior";
 import { nextGap } from "@/lib/server/gaps";
 import { TaskToggle } from "@/components/TaskToggle";
 import { Card, EmptyState, Notice, SectionHeader, buttonClass } from "@/components/ui";
@@ -30,7 +32,7 @@ export default async function HomePage() {
     return childId ? q.or(childOrFilter(ctx, childId)) : q;
   };
 
-  const [tasksRes, eventsRes, noticesRes, pendingRes, docsRes, gap] = await Promise.all([
+  const [tasksRes, eventsRes, noticesRes, pendingRes, docsRes, gap, behavior] = await Promise.all([
     base().eq("kind", "task").is("completed_at", null).order("due_at", { ascending: true, nullsFirst: false }).limit(30),
     // Events overlapping today..+14d (multi-day events that started earlier included).
     base().not("starts_at", "is", null).lt("starts_at", in14).or(`starts_at.gte.${startToday},ends_at.gte.${startToday}`).order("starts_at").limit(40),
@@ -38,6 +40,7 @@ export default async function HomePage() {
     ctx.supabase.from("extraction_candidates").select("document_id, source_documents(batch_id)").eq("family_id", ctx.family.id).eq("status", "pending").limit(200),
     ctx.supabase.from("source_documents").select("id", { count: "exact", head: true }).eq("family_id", ctx.family.id),
     nextGap(ctx),
+    loadBehavior(ctx, 45),
   ]);
 
   const tasks = (tasksRes.data ?? []) as ItemView[];
@@ -73,6 +76,8 @@ export default async function HomePage() {
           <Stat value={pending.length} label="To review" highlight={pending.length > 0} />
         </div>
       </section>
+
+      <BehaviorSummary ctx={ctx} systems={behavior.systems} entries={behavior.entries} rewards={behavior.rewards} today={behavior.today} childFilter={childId} />
 
       {gap && <QuickQuestion gap={gap} />}
 

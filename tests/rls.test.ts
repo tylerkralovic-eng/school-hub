@@ -91,6 +91,21 @@ describe("cross-family isolation", () => {
   });
 });
 
+describe("points tracking isolation", () => {
+  it("another family can't read or write a child's points or prizes", async () => {
+    const sys = await a1.client.from("tracking_systems").insert({ family_id: famA, child_id: childA, name: "Stars", kind: "count", count_max: 3 }).select("id").single();
+    expect(sys.error).toBeNull();
+    expect((await a1.client.from("behavior_entries").insert({ family_id: famA, child_id: childA, day: "2026-11-20", count: 3, points: 3 })).error).toBeNull();
+    expect((await a1.client.from("rewards").insert({ family_id: famA, child_id: childA, horizon: "week", title: "Ice cream", points_goal: 10 })).error).toBeNull();
+    for (const t of ["tracking_systems", "behavior_entries", "rewards"] as const) {
+      const { data } = await b1.client.from(t).select("*").eq("family_id", famA);
+      expect(data ?? [], `${t} leaked`).toHaveLength(0);
+    }
+    expect((await b1.client.from("behavior_entries").insert({ family_id: famA, child_id: childA, day: "2026-11-19", count: 0, points: 0 })).error).not.toBeNull();
+    expect((await b1.client.from("behavior_entries").insert({ family_id: famB, child_id: childA, day: "2026-11-19", count: 0, points: 0 })).error?.message).toMatch(/child does not belong/);
+  });
+});
+
 describe("secrets and storage", () => {
   it("integration secrets are never readable by users", async () => {
     await admin().from("integration_secrets").insert({ family_id: famA, kind: "gmail", owner_ref: famA, ciphertext: "x" });

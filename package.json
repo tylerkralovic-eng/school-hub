@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:e2e": "node tests/e2e/m1-family.mjs && node tests/e2e/m2-extraction.mjs && node tests/e2e/m3-m5.mjs && node tests/e2e/onboarding-chat.mjs",
+    "test:e2e": "node tests/e2e/m1-family.mjs && node tests/e2e/m2-extraction.mjs && node tests/e2e/m3-m5.mjs && node tests/e2e/onboarding-chat.mjs && node tests/e2e/points.mjs",
     "db:start": "supabase start -x realtime,edge-runtime,logflare,vector,supavisor,studio,postgres-meta,imgproxy",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",

@@ -43,6 +43,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"behavior_entries": {
+                  Row: {
+                    "child_id": string,"count": number | null,"created_at": string,"day": string,"family_id": string,"id": string,"level_key": string | null,"note": string | null,"points": number,"recorded_by": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "child_id": string,"count"?: number | null,"created_at"?: string,"day": string,"family_id": string,"id"?: string,"level_key"?: string | null,"note"?: string | null,"points"?: number,"recorded_by"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "child_id"?: string,"count"?: number | null,"created_at"?: string,"day"?: string,"family_id"?: string,"id"?: string,"level_key"?: string | null,"note"?: string | null,"points"?: number,"recorded_by"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "behavior_entries_child_id_fkey"
+      columns: ["child_id"]
+isOneToOne: false
+      referencedRelation: "children"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "behavior_entries_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"children": {
                   Row: {
                     "aliases": (string)[],"color": string,"created_at": string,"family_id": string,"first_name": string,"grade": string | null,"id": string,"school_id": string | null
@@ -331,6 +357,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"rewards": {
+                  Row: {
+                    "child_id": string,"claimed_at": string | null,"created_at": string,"family_id": string,"horizon": string,"id": string,"points_goal": number,"starts_on": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "child_id": string,"claimed_at"?: string | null,"created_at"?: string,"family_id": string,"horizon": string,"id"?: string,"points_goal": number,"starts_on"?: string,"title": string
+                  }
+                  Update: {
+                    "child_id"?: string,"claimed_at"?: string | null,"created_at"?: string,"family_id"?: string,"horizon"?: string,"id"?: string,"points_goal"?: number,"starts_on"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "rewards_child_id_fkey"
+      columns: ["child_id"]
+isOneToOne: false
+      referencedRelation: "children"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "rewards_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"schools": {
                   Row: {
                     "calendar_url": string | null,"created_at": string,"family_id": string,"id": string,"name": string,"short_name": string | null,"town": string | null,"website": string | null
@@ -412,6 +464,32 @@ isOneToOne: false
       columns: ["school_hint_id"]
 isOneToOne: false
       referencedRelation: "schools"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"tracking_systems": {
+                  Row: {
+                    "check_in_time": string | null,"child_id": string,"count_max": number | null,"count_unit": string | null,"created_at": string,"description": string | null,"family_id": string,"id": string,"kind": string,"levels": NonNullable<Json>,"name": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "check_in_time"?: string | null,"child_id": string,"count_max"?: number | null,"count_unit"?: string | null,"created_at"?: string,"description"?: string | null,"family_id": string,"id"?: string,"kind": string,"levels"?: NonNullable<Json>,"name": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "check_in_time"?: string | null,"child_id"?: string,"count_max"?: number | null,"count_unit"?: string | null,"created_at"?: string,"description"?: string | null,"family_id"?: string,"id"?: string,"kind"?: string,"levels"?: NonNullable<Json>,"name"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tracking_systems_child_id_fkey"
+      columns: ["child_id"]
+isOneToOne: true
+      referencedRelation: "children"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tracking_systems_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
       referencedColumns: ["id"]
     }
                   ]
