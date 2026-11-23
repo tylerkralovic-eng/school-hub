@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { getConnectStatus, startPhoneLink, type ConnectStatus } from "@/app/actions/connections";
 import { Icon, type IconName } from "@/components/Icon";
+import { SenderDiscovery } from "@/components/SenderDiscovery";
 import { buttonClass } from "@/components/ui";
 
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
@@ -72,7 +73,10 @@ export function ConnectSteps({ initial }: { initial: ConnectStatus }) {
       {s.gmail && (
         <Step icon="mail" title="Read school emails automatically" done={Boolean(s.gmail.connectedEmail)}>
           {s.gmail.connectedEmail ? (
-            <p>Connected to {s.gmail.connectedEmail}. New school emails show up for review on their own.</p>
+            <>
+              <p>Connected to {s.gmail.connectedEmail}. {s.gmail.ruleCount ? "New school emails show up for review on their own." : "One more tap: tell me which senders are school."}</p>
+              <SenderDiscovery hasRules={s.gmail.ruleCount > 0} />
+            </>
           ) : (
             <>
               <p>{s.gmail.needsReconnect ? "Google access expired — reconnect to keep emails flowing." : "Read-only, and only messages from your schools and school apps."}</p>

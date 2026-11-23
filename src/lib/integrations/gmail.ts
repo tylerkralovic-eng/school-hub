@@ -72,9 +72,17 @@ export interface MailMessage {
   text: string;
   attachments: MailAttachment[];
 }
+export interface MailHeaders {
+  id: string;
+  from: string;
+  subject: string;
+  date: string; // ISO
+}
 export interface MailProvider {
   list(query: string, max: number): Promise<string[]>;
   get(id: string): Promise<MailMessage>;
+  /** From/Subject/Date only — never the body. Used to discover school senders. */
+  headers(id: string): Promise<MailHeaders>;
 }
 
 interface Part {
@@ -118,6 +126,12 @@ export class GmailProvider implements MailProvider {
   async list(query: string, max: number) {
     const r = await this.api<{ messages?: { id: string }[] }>(`messages?q=${encodeURIComponent(query)}&maxResults=${max}`);
     return (r.messages ?? []).map((m) => m.id);
+  }
+
+  async headers(id: string): Promise<MailHeaders> {
+    const m = await this.api<{ id: string; internalDate: string; payload: Part }>(`messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`);
+    const header = (n: string) => m.payload.headers?.find((h) => h.name.toLowerCase() === n)?.value ?? "";
+    return { id: m.id, from: header("from"), subject: header("subject"), date: new Date(Number(m.internalDate)).toISOString() };
   }
 
   async get(id: string): Promise<MailMessage> {

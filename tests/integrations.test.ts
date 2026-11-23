@@ -100,6 +100,7 @@ describe("gmail sync (fake mailbox, real database)", () => {
     const fake: MailProvider = {
       async list(q) { queries.push(q); return Object.keys(mailbox); },
       async get(id) { return { id, ...mailbox[id], date: new Date().toISOString(), attachments: [] }; },
+      async headers(id) { return { id, from: mailbox[id].from, subject: mailbox[id].subject, date: new Date().toISOString() }; },
     };
     const r1 = await syncConnection(db, conn, fake);
     expect(queries[0]).toContain("from:(remind.com)");
@@ -130,5 +131,55 @@ describe("gmail sync (fake mailbox, real database)", () => {
     const { data } = await db.from("gmail_connections").select("status, last_error").eq("id", conn.id).single();
     expect(data!.status).toBe("error");
     expect(data!.last_error).toMatch(/Reconnect/);
+  });
+});
+
+import { aggregateSenders, heuristicSuggestion, mergeByPattern, patternFor } from "@/lib/integrations/discover";
+import { discoverSchoolSenders } from "@/lib/integrations/discover-ai";
+
+describe("finding school senders from headers only", () => {
+  const inbox: Record<string, { from: string; subject: string }> = {
+    a: { from: "Remind <no-reply@remind.com>", subject: "Ms. Rivera: Pajama day Wednesday" },
+    b: { from: "Remind <no-reply@remind.com>", subject: "Ms. Rivera: Picture day" },
+    c: { from: "Frey Elementary <frey@cobbk12.org>", subject: "Early release Friday" },
+    d: { from: "Cobb Schools <news@cobbk12.org>", subject: "Thanksgiving break reminder" },
+    e: { from: "Amazon <ship-confirm@amazon.com>", subject: "Your order has shipped" },
+    f: { from: "Ms Lopez <jlopez.teacher@gmail.com>", subject: "2nd grade field trip permission slip" },
+    g: { from: "Chase <alerts@chase.com>", subject: "Your statement is ready" },
+    h: { from: "MySchoolBucks <noreply@myschoolbucks.com>", subject: "Low balance alert" },
+  };
+  const provider = {
+    async list() { return Object.keys(inbox); },
+    async get(): Promise<never> { throw new Error("bodies must not be read during discovery"); },
+    async headers(id: string) { return { id, ...inbox[id], date: "2026-11-20T15:00:00.000Z" }; },
+  };
+
+  it("groups senders and picks patterns safely", () => {
+    const agg = aggregateSenders(Object.entries(inbox).map(([id, m]) => ({ id, ...m, date: "2026-11-20T15:00:00.000Z" })));
+    expect(agg[0]).toMatchObject({ address: "no-reply@remind.com", count: 2 });
+    expect(patternFor({ address: "jlopez.teacher@gmail.com", domain: "gmail.com" })).toBe("jlopez.teacher@gmail.com"); // never all of gmail
+    expect(patternFor({ address: "frey@cobbk12.org", domain: "cobbk12.org" })).toBe("@cobbk12.org");
+    expect(heuristicSuggestion(agg.find((s) => s.domain === "amazon.com")!)).toBeNull();
+  });
+
+  it("suggests school apps, the district and the teacher — not shopping or banks — without reading bodies", async () => {
+    const r = await discoverSchoolSenders(provider, { kids: [{ first_name: "Everley", school: "Frey Elementary" }], existingPatterns: ["@myschoolbucks.com"] });
+    const patterns = r.suggestions.map((s) => s.pattern);
+    expect(patterns).toContain("@remind.com");
+    expect(patterns).toContain("@cobbk12.org");
+    expect(patterns).toContain("jlopez.teacher@gmail.com");
+    expect(patterns).not.toContain("@amazon.com");
+    expect(patterns).not.toContain("@chase.com");
+    expect(patterns).not.toContain("@myschoolbucks.com"); // already watched
+    expect(r.suggestions.find((s) => s.pattern === "@cobbk12.org")!.count).toBe(2); // merged
+    expect(r.suggestions.find((s) => s.pattern === "@remind.com")!.platform_key).toBe("remind");
+    expect(r.scanned).toBe(8);
+  });
+
+  it("merges by pattern", () => {
+    const base = { name: "", domain: "x.org", subjects: [], last: "", platform_key: null, child_name: null, reason: "", confidence: "medium" as const };
+    const m = mergeByPattern([{ ...base, address: "a@x.org", count: 1, pattern: "@x.org" }, { ...base, address: "b@x.org", count: 2, pattern: "@x.org", confidence: "high" }]);
+    expect(m).toHaveLength(1);
+    expect(m[0]).toMatchObject({ count: 3, confidence: "high" });
   });
 });
