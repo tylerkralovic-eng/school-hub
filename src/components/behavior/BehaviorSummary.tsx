@@ -19,7 +19,7 @@ export function rewardProgress(r: Reward, entries: Entry[], today: string) {
 }
 
 /** Home card: how each child's school days are going, per their school's own system. */
-export function BehaviorSummary({ ctx, systems, entries, rewards, today, childFilter }: { ctx: FamilyContext; systems: (TrackingSystem & { id: string })[]; entries: Entry[]; rewards: Reward[]; today: string; childFilter: string | null }) {
+export function BehaviorSummary({ ctx, systems, entries, rewards, today, childFilter, showCheckIn = true }: { ctx: FamilyContext; systems: (TrackingSystem & { id: string })[]; entries: Entry[]; rewards: Reward[]; today: string; childFilter: string | null; showCheckIn?: boolean }) {
   const tz = ctx.family.timezone;
   const nowTime = utcToZoned(new Date(), tz).time;
   const kids = ctx.children.filter((c) => !childFilter || c.id === childFilter);
@@ -79,7 +79,7 @@ export function BehaviorSummary({ ctx, systems, entries, rewards, today, childFi
               )}
             </div>
 
-            {due && (
+            {due && showCheckIn && (
               <div className="rounded-2xl bg-indigo-50/70 p-3">
                 <CheckIn childId={kid.id} day={today} prompt={`How was ${kid.first_name}'s day?`} choices={clientChoices(s)} shape={shape} max={s.count_max} />
               </div>

@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createInvite } from "@/app/actions/family";
-import { addSenderRule } from "@/app/actions/connections";
+import { addSenderRule, rereadImages } from "@/app/actions/connections";
 import { researchSchool } from "@/lib/onboarding/ai";
 import { parseInvite, parseSchool } from "@/lib/onboarding/parse";
 import { audit, requireFamily } from "@/lib/server/context";
@@ -23,6 +23,10 @@ export async function answerGap(id: string, value: string): Promise<{ reply: str
   const v = value.trim().slice(0, 500);
   let reply = "Got it — thanks!";
 
+  if (id === "reread") {
+    const r = await rereadImages();
+    return { reply: r.reply };
+  }
   if (id.startsWith("school:")) {
     const kid = ctx.children.find((c) => c.id === id.slice(7));
     const parsed = parseSchool(v);

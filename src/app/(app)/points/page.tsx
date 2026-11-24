@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { claimReward, deleteReward, removeTracking, saveReward, saveTrackingSettings } from "@/app/actions/behavior";
 import { ActionForm, ConfirmButton } from "@/components/ActionForm";
-import { rewardProgress } from "@/components/behavior/BehaviorSummary";
+import { BehaviorSummary, rewardProgress } from "@/components/behavior/BehaviorSummary";
 import { CheckIn } from "@/components/behavior/CheckIn";
 import { DayEditor } from "@/components/behavior/DayEditor";
 import { Icon } from "@/components/Icon";
@@ -44,6 +44,7 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
     <div className="space-y-6 pb-6">
       <PageTitle title="Points" subtitle="Log days, fill in history and set prizes." action={<Link href="/points/kids" className={`${buttonClass.secondary} !px-3 !py-2 text-sm`}>Kid view</Link>} />
       {sp.setup === "done" && <Notice tone="ok" title="Tracking is on">Log today below. To fill in earlier days, tap them in the month grid.</Notice>}
+      <BehaviorSummary ctx={ctx} systems={systems} entries={entries} rewards={rewards} today={today} childFilter={childFilter} showCheckIn={false} />
 
       {kids.map((kid) => {
         const s = systems.find((x) => x.child_id === kid.id);

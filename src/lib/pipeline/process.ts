@@ -163,7 +163,7 @@ export async function processDocument(db: Db, documentId: string, opts: { extraF
   const dates = drafts.map((d) => d.starts_at ?? d.due_at).filter(Boolean) as string[];
   let existing: Comparable[] = [];
   if (drafts.length) {
-    let q = db.from("items").select("id, kind, title, starts_at, due_at, child_id, school_id").eq("family_id", doc.family_id).limit(500);
+    let q = db.from("items").select("id, kind, category, title, starts_at, ends_at, due_at, child_id, school_id").eq("family_id", doc.family_id).limit(500);
     if (dates.length) {
       const min = zonedToUtc(addDays(utcToZoned(dates.reduce((a, b) => (a < b ? a : b)), tz).date, -1), null, tz);
       const max = zonedToUtc(addDays(utcToZoned(dates.reduce((a, b) => (a > b ? a : b)), tz).date, 2), null, tz);
@@ -214,12 +214,14 @@ export async function applyReview(
   db: Db,
   ctx: { familyId: string; userId: string; timezone: string; children: { id: string; school_id: string | null }[]; schools: { id: string }[] },
   decisions: Decision[],
+  members: Record<string, string> = {}, // memberCandidateId -> primaryCandidateId (same thing, other source)
 ): Promise<{ created: number; merged: number; rejected: number; errors: string[] }> {
-  const ids = decisions.map((d) => d.id);
+  const ids = [...decisions.map((d) => d.id), ...Object.keys(members)];
   const { data: cands } = await db.from("extraction_candidates").select("*").in("id", ids).eq("family_id", ctx.familyId).eq("status", "pending");
   const byId = new Map((cands ?? []).map((c) => [c.id, c]));
   const result = { created: 0, merged: 0, rejected: 0, errors: [] as string[] };
   const touchedDocs = new Set<string>();
+  const itemFor = new Map<string, string>(); // candidate id -> item it became / merged into
 
   for (const d of decisions) {
     const c = byId.get(d.id);
@@ -233,6 +235,7 @@ export async function applyReview(
     if (c.duplicate_of && d.merge) {
       await db.from("item_sources").upsert({ item_id: c.duplicate_of, document_id: c.document_id, family_id: ctx.familyId, evidence: c.evidence });
       await db.from("extraction_candidates").update({ status: "approved" }).eq("id", c.id);
+      itemFor.set(c.id, c.duplicate_of);
       result.merged++;
       continue;
     }
@@ -289,7 +292,22 @@ export async function applyReview(
     }
     await db.from("item_sources").insert({ item_id: item.id, document_id: c.document_id, family_id: ctx.familyId, evidence: c.evidence });
     await db.from("extraction_candidates").update({ status: "approved" }).eq("id", c.id);
+    itemFor.set(c.id, item.id);
     result.created++;
+  }
+
+  // Same thing from other sources: link their documents to the one item.
+  for (const [memberId, primaryId] of Object.entries(members)) {
+    const m = byId.get(memberId);
+    if (!m) continue;
+    touchedDocs.add(m.document_id);
+    const itemId = itemFor.get(primaryId);
+    if (itemId) {
+      await db.from("item_sources").upsert({ item_id: itemId, document_id: m.document_id, family_id: ctx.familyId, evidence: m.evidence });
+      await db.from("extraction_candidates").update({ status: "approved" }).eq("id", m.id);
+    } else if (decisions.find((d) => d.id === primaryId && !d.include)) {
+      await db.from("extraction_candidates").update({ status: "rejected" }).eq("id", m.id);
+    }
   }
 
   // Documents with nothing left to review are done.

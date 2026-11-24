@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { deleteDocument, retryDocument } from "@/app/actions/ingest";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Icon } from "@/components/Icon";
-import { ReviewForm, type ReviewCandidate } from "@/components/ReviewForm";
+import { ReviewForm } from "@/components/ReviewForm";
+import { loadReview } from "@/lib/server/review";
 import { Card, Notice, PageTitle, buttonClass } from "@/components/ui";
 import { SubmitButton } from "@/components/forms";
 import { requireFamily } from "@/lib/server/context";
-import { fmt, utcToZoned } from "@/lib/time";
-import { CATEGORY_LABELS, CHANNEL_LABELS, type ItemCategory } from "@/lib/types";
+import { fmt } from "@/lib/time";
+import { CHANNEL_LABELS } from "@/lib/types";
 
 export const metadata = { title: "Review · School Hub" };
 export const maxDuration = 300;
@@ -22,47 +23,13 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
 
   const { data: docs } = await ctx.supabase.from("source_documents").select("*").eq("family_id", ctx.family.id).eq("batch_id", batchId).order("created_at");
   if (!docs?.length) notFound();
-  const { data: cands } = await ctx.supabase
-    .from("extraction_candidates")
-    .select("*")
-    .in("document_id", docs.map((d) => d.id))
-    .eq("status", "pending")
-    .order("document_id")
-    .order("position");
-  const dupIds = [...new Set((cands ?? []).map((c) => c.duplicate_of).filter(Boolean) as string[])];
-  const { data: dups } = dupIds.length ? await ctx.supabase.from("items").select("id, title").in("id", dupIds) : { data: [] };
+  const candidates = await loadReview(ctx, docs.map((d) => d.id));
 
   const busy = docs.some((d) => d.status === "processing" || d.status === "pending");
   const whoOptions = [
     ...ctx.children.map((c) => ({ value: c.id, label: c.first_name })),
     ...ctx.schools.map((s) => ({ value: `school:${s.id}`, label: `Everyone at ${s.short_name || s.name}` })),
   ];
-
-  const candidates: ReviewCandidate[] = (cands ?? []).map((c) => {
-    const start = c.starts_at ?? c.due_at;
-    const local = start ? utcToZoned(start, tz) : null;
-    const end = c.ends_at ? utcToZoned(c.ends_at, tz) : null;
-    const timed = local && !(c.kind === "event" && c.all_day) && !(c.kind === "task" && local.time === "23:59");
-    return {
-      id: c.id,
-      kind: c.kind,
-      category: c.category,
-      categoryLabel: CATEGORY_LABELS[c.category as ItemCategory],
-      title: c.title,
-      details: c.details,
-      who: c.child_id ?? (c.school_id ? `school:${c.school_id}` : ""),
-      date: local?.date ?? null,
-      time: timed ? local!.time : null,
-      endDate: end && end.date !== local?.date ? end.date : null,
-      endTime: end && !c.all_day ? end.time : null,
-      location: c.location,
-      amount: c.amount_cents != null ? (c.amount_cents / 100).toFixed(2) : null,
-      evidence: c.evidence,
-      needsReview: c.needs_review,
-      reviewReason: c.review_reason,
-      duplicateTitle: dups?.find((d) => d.id === c.duplicate_of)?.title ?? null,
-    };
-  });
 
   const saved = sp.saved !== undefined;
 

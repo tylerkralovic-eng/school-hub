@@ -1,4 +1,3 @@
--- School Hub database setup (all migrations combined). Paste into Supabase → SQL Editor → Run, once, on a new project.
 -- School Hub core schema.
 -- Every family-owned table carries family_id and is protected by Row Level
 -- Security: a signed-in user can only touch rows of families they belong to.
@@ -552,4 +551,18 @@ create trigger behavior_entries_touch before update on public.behavior_entries f
 -- Points per count value (e.g. {"0": -2, "1": 1, "2": 2, "3": 3}) so a count
 -- system can take points away on a rough day. Null = points equal the count.
 alter table public.tracking_systems add column if not exists count_points jsonb;
+
+-- Which mailbox an email came from, so "Open in Gmail" opens the right account.
+alter table public.source_documents add column if not exists origin_account text;
+
+-- Pairs a parent said are NOT duplicates, so the cleanup never suggests them again.
+create table if not exists public.not_duplicates (
+  family_id uuid not null references public.families(id) on delete cascade,
+  item_a uuid not null references public.items(id) on delete cascade,
+  item_b uuid not null references public.items(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (item_a, item_b)
+);
+alter table public.not_duplicates enable row level security;
+create policy not_duplicates_all on public.not_duplicates for all using (public.is_family_member(family_id)) with check (public.is_family_member(family_id));
 

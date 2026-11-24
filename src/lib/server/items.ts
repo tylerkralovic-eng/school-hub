@@ -3,7 +3,7 @@ import type { FamilyContext } from "@/lib/server/context";
 import type { Channel, Item } from "@/lib/types";
 
 export const ITEM_SELECT =
-  "*, item_sources(evidence, created_at, document:source_documents(id, channel, title, sender, received_at, platform_key, mime_type, storage_path))";
+  "*, item_sources(evidence, created_at, document:source_documents(id, channel, title, sender, received_at, platform_key, mime_type, storage_path, origin_ref, origin_account))";
 
 export interface ItemSourceView {
   evidence: string | null;
@@ -17,6 +17,8 @@ export interface ItemSourceView {
     platform_key: string | null;
     mime_type: string | null;
     storage_path: string | null;
+    origin_ref: string | null;
+    origin_account: string | null;
   } | null;
 }
 export type ItemView = Item & { item_sources: ItemSourceView[] };
@@ -37,4 +39,10 @@ export function receivedAt(item: ItemView): string {
 /** Date the item belongs to on a calendar (event start or task due). */
 export function itemDate(item: Item): string | null {
   return item.starts_at ?? item.due_at ?? null;
+}
+
+/** Deep link to the original email in the right Gmail account (null if not an email we can link). */
+export function inboxLink(doc: { channel: string; origin_ref: string | null; origin_account: string | null } | null): string | null {
+  if (!doc || doc.channel !== "gmail" || !doc.origin_ref?.startsWith("gmail:") || !doc.origin_account?.includes("@")) return null;
+  return `https://mail.google.com/mail/u/${encodeURIComponent(doc.origin_account)}/#all/${encodeURIComponent(doc.origin_ref.slice(6))}`;
 }

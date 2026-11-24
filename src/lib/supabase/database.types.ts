@@ -357,6 +357,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"not_duplicates": {
+                  Row: {
+                    "created_at": string,"family_id": string,"item_a": string,"item_b": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"family_id": string,"item_a": string,"item_b": string
+                  }
+                  Update: {
+                    "created_at"?: string,"family_id"?: string,"item_a"?: string,"item_b"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "not_duplicates_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "not_duplicates_item_a_fkey"
+      columns: ["item_a"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "not_duplicates_item_b_fkey"
+      columns: ["item_b"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"rewards": {
                   Row: {
                     "child_id": string,"claimed_at": string | null,"created_at": string,"family_id": string,"horizon": string,"id": string,"points_goal": number,"starts_on": string,"title": string
@@ -437,14 +469,14 @@ isOneToOne: false
                   ]
                 },"source_documents": {
                   Row: {
-                    "ai_summary": string | null,"batch_id": string,"channel": Database["public"]['Enums']["channel"],"child_hint_id": string | null,"content_hash": string,"created_at": string,"error": string | null,"family_id": string,"id": string,"is_school_related": boolean | null,"mime_type": string | null,"origin_ref": string | null,"platform_key": string | null,"processed_at": string | null,"received_at": string,"school_hint_id": string | null,"sender": string | null,"status": Database["public"]['Enums']["document_status"],"storage_path": string | null,"submitted_by": string | null,"text_content": string | null,"title": string | null
+                    "ai_summary": string | null,"batch_id": string,"channel": Database["public"]['Enums']["channel"],"child_hint_id": string | null,"content_hash": string,"created_at": string,"error": string | null,"family_id": string,"id": string,"is_school_related": boolean | null,"mime_type": string | null,"origin_account": string | null,"origin_ref": string | null,"platform_key": string | null,"processed_at": string | null,"received_at": string,"school_hint_id": string | null,"sender": string | null,"status": Database["public"]['Enums']["document_status"],"storage_path": string | null,"submitted_by": string | null,"text_content": string | null,"title": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "ai_summary"?: string | null,"batch_id"?: string,"channel": Database["public"]['Enums']["channel"],"child_hint_id"?: string | null,"content_hash": string,"created_at"?: string,"error"?: string | null,"family_id": string,"id"?: string,"is_school_related"?: boolean | null,"mime_type"?: string | null,"origin_ref"?: string | null,"platform_key"?: string | null,"processed_at"?: string | null,"received_at"?: string,"school_hint_id"?: string | null,"sender"?: string | null,"status"?: Database["public"]['Enums']["document_status"],"storage_path"?: string | null,"submitted_by"?: string | null,"text_content"?: string | null,"title"?: string | null
+                    "ai_summary"?: string | null,"batch_id"?: string,"channel": Database["public"]['Enums']["channel"],"child_hint_id"?: string | null,"content_hash": string,"created_at"?: string,"error"?: string | null,"family_id": string,"id"?: string,"is_school_related"?: boolean | null,"mime_type"?: string | null,"origin_account"?: string | null,"origin_ref"?: string | null,"platform_key"?: string | null,"processed_at"?: string | null,"received_at"?: string,"school_hint_id"?: string | null,"sender"?: string | null,"status"?: Database["public"]['Enums']["document_status"],"storage_path"?: string | null,"submitted_by"?: string | null,"text_content"?: string | null,"title"?: string | null
                   }
                   Update: {
-                    "ai_summary"?: string | null,"batch_id"?: string,"channel"?: Database["public"]['Enums']["channel"],"child_hint_id"?: string | null,"content_hash"?: string,"created_at"?: string,"error"?: string | null,"family_id"?: string,"id"?: string,"is_school_related"?: boolean | null,"mime_type"?: string | null,"origin_ref"?: string | null,"platform_key"?: string | null,"processed_at"?: string | null,"received_at"?: string,"school_hint_id"?: string | null,"sender"?: string | null,"status"?: Database["public"]['Enums']["document_status"],"storage_path"?: string | null,"submitted_by"?: string | null,"text_content"?: string | null,"title"?: string | null
+                    "ai_summary"?: string | null,"batch_id"?: string,"channel"?: Database["public"]['Enums']["channel"],"child_hint_id"?: string | null,"content_hash"?: string,"created_at"?: string,"error"?: string | null,"family_id"?: string,"id"?: string,"is_school_related"?: boolean | null,"mime_type"?: string | null,"origin_account"?: string | null,"origin_ref"?: string | null,"platform_key"?: string | null,"processed_at"?: string | null,"received_at"?: string,"school_hint_id"?: string | null,"sender"?: string | null,"status"?: Database["public"]['Enums']["document_status"],"storage_path"?: string | null,"submitted_by"?: string | null,"text_content"?: string | null,"title"?: string | null
                   }
                   Relationships: [
                     {

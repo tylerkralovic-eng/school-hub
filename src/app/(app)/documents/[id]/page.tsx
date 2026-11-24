@@ -4,6 +4,7 @@ import { ConfirmButton } from "@/components/ActionForm";
 import { Card, PageTitle, buttonClass } from "@/components/ui";
 import { platformName } from "@/lib/platforms";
 import { requireFamily } from "@/lib/server/context";
+import { inboxLink } from "@/lib/server/items";
 import { fmt } from "@/lib/time";
 import { CHANNEL_LABELS } from "@/lib/types";
 
@@ -22,6 +23,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     <div className="space-y-5 pb-6">
       <PageTitle title={doc.title || "Original"} subtitle={`${CHANNEL_LABELS[doc.channel]}${doc.platform_key ? ` · ${platformName(doc.platform_key)}` : ""}${doc.sender ? ` · ${doc.sender}` : ""} · received ${fmt(doc.received_at, tz, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}`} />
       {doc.ai_summary && <p className="px-1 text-sm text-slate-600">{doc.ai_summary}</p>}
+      {inboxLink(doc) && <a href={inboxLink(doc)!} target="_blank" rel="noopener noreferrer" className={`${buttonClass.primary} w-full`}>Open in Gmail ({doc.origin_account})</a>}
       {signed && doc.mime_type?.startsWith("image/") && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={signed} alt={doc.title ?? "Original document"} className="w-full rounded-2xl border border-slate-200 bg-white" />

@@ -88,8 +88,26 @@ describe("setup understands penalties and notices when points weren't given", ()
   });
   it("applies 'minus 2' to each child's worst outcome", () => {
     const r = heuristicParse("Everley gets stars: purple superb, white normal, yellow talked to, red bad. Adler keeps 3 skittles. Red star or 0 skittles is minus 2 points.", kids);
+    expect(r.systems.find((s) => s.child_name === "Everley")!.levels.map((l) => l.points)).toEqual([3, 1, 0, -2]); // purple "superb" → exceptional; red overridden by the stated penalty
     expect(r.systems.find((s) => s.child_name === "Everley")!.levels.at(-1)).toMatchObject({ label: "Red", points: -2 });
     expect(r.systems.find((s) => s.child_name === "Adler")!.count_points).toEqual([{ count: 0, points: -2 }]);
     expect(r.systems.every((s) => s.points_stated)).toBe(true);
+  });
+});
+
+import { parseTrackingDescription } from "@/lib/behavior-ai";
+describe("balanced rubric (like-for-like points)", () => {
+  it("turns the Kralovic description into the same scale they chose by hand", async () => {
+    const kids = [{ id: "e", first_name: "Everley" }, { id: "a", first_name: "Adler" }];
+    const r = await parseTrackingDescription(
+      "Everley's school tracks stars each day. Normal day is white star, yellow is had to be talked to a few times, red is bad, purple is superb day (rare). Adler's tracks skittles. They leave school with 3 skittles unless they get in trouble. 3 is best, 0 is really bad.",
+      kids,
+    );
+    const e = r.find((s) => s.child_name === "Everley")!;
+    expect(Object.fromEntries(e.levels.map((l) => [l.label, l.points]))).toEqual({ Purple: 3, White: 1, Yellow: 0, Red: -2 });
+    expect(e.tiers).toMatchObject({ purple: "exceptional", white: "good", yellow: "issues", red: "rough" });
+    const a = r.find((s) => s.child_name === "Adler")!;
+    expect(a.count_points).toEqual({ "0": -2, "1": 0, "2": 1, "3": 1 });
+    expect(r.every((s) => s.points_stated === false)).toBe(true);
   });
 });

@@ -56,13 +56,11 @@ export async function syncConnection(db: Db, conn: Conn, provider?: MailProvider
         childHintId: rule.child_id,
         schoolHintId: rule.school_id,
         receivedAt: msg.date,
+        submittedBy: conn.user_id,
       });
       if (doc.duplicate) continue;
-      // Attachments (flyers, calendars) become part of the same extraction.
-      const extraFiles = msg.attachments.flatMap((a) => {
-        const mime = sniffMime(a.data);
-        return mime ? [{ mime, base64: a.data.toString("base64") }] : [];
-      });
+      await db.from("source_documents").update({ origin_account: conn.google_email }).eq("id", doc.id);
+      const extraFiles = emailFiles(msg.attachments);
       if (features.ai()) await processDocument(db, doc.id, { extraFiles });
       created++;
     }
@@ -80,6 +78,78 @@ export async function syncConnection(db: Db, conn: Conn, provider?: MailProvider
     console.error("gmail sync failed", conn.id, e instanceof Error ? e.message : e);
     return { fetched: 0, created: 0, status: auth ? "auth_error" : "error" };
   }
+}
+
+/** Attachments + inline + web images as extraction inputs (type-checked, total size capped). */
+export function emailFiles(attachments: { mime: string; data: Buffer }[]) {
+  let total = 0;
+  return attachments.flatMap((a) => {
+    const mime = sniffMime(a.data);
+    if (!mime || total + a.data.byteLength > 20 * 1024 * 1024) return [];
+    total += a.data.byteLength;
+    return [{ mime, base64: a.data.toString("base64") }];
+  });
+}
+
+/**
+ * Re-reads already-imported emails for the images/attachments they contain
+ * (and records which mailbox each came from). New findings go to review;
+ * items already saved are matched as duplicates, not re-added.
+ */
+export async function rereadEmailImages(db: Db, familyId: string, limit = 60): Promise<{ checked: number; withImages: number; newItems: number; remaining: number }> {
+  const { data: conns } = await db.from("gmail_connections").select("*").eq("family_id", familyId).eq("status", "connected");
+  const providers: { conn: Conn; p: MailProvider }[] = [];
+
+  for (const c of conns ?? []) {
+    const { data: secret } = await db.from("integration_secrets").select("ciphertext").eq("kind", "gmail").eq("owner_ref", c.id).maybeSingle();
+    if (!secret) continue;
+    try {
+      providers.push({ conn: c, p: new GmailProvider(await accessTokenFor(decryptSecret(secret.ciphertext))) });
+    } catch {
+      /* expired: skip this mailbox */
+    }
+  }
+  if (!providers.length) return { checked: 0, withImages: 0, newItems: 0, remaining: -1 };
+  const { data: docs } = await db.from("source_documents").select("id, origin_ref, origin_account").eq("family_id", familyId).eq("channel", "gmail").like("origin_ref", "gmail:%").is("origin_account", null).order("received_at", { ascending: false }).limit(limit);
+  let withImages = 0;
+  let newItems = 0;
+  let checked = 0;
+  const deadline = Date.now() + 200_000; // stay well inside the 300 s function limit
+  const queue = [...(docs ?? [])];
+  const worker = async () => {
+    while (queue.length && Date.now() < deadline) {
+      const d = queue.shift()!;
+      const msgId = d.origin_ref!.slice(6);
+      let found = false;
+      for (const { conn, p } of providers) {
+        let msg;
+        try { msg = await p.get(msgId); } catch { continue; } // not in this mailbox
+        const files = emailFiles(msg.attachments);
+        if (files.length && features.ai()) {
+          withImages++;
+          await processDocument(db, d.id, { extraFiles: files });
+          // Items already saved from this same email are the same things: drop them silently.
+          const { data: dupes } = await db.from("extraction_candidates").select("id, duplicate_of").eq("document_id", d.id).eq("status", "pending").not("duplicate_of", "is", null);
+          for (const c of dupes ?? []) {
+            const { count } = await db.from("item_sources").select("item_id", { count: "exact", head: true }).eq("item_id", c.duplicate_of!).eq("document_id", d.id);
+            if (count) await db.from("extraction_candidates").update({ status: "rejected" }).eq("id", c.id);
+          }
+          const { count: left } = await db.from("extraction_candidates").select("id", { count: "exact", head: true }).eq("document_id", d.id).eq("status", "pending");
+          newItems += left ?? 0;
+          if (!left) await db.from("source_documents").update({ status: "done" }).eq("id", d.id);
+        }
+        // Mark as checked (and which mailbox) only once done, so a timeout resumes cleanly.
+        await db.from("source_documents").update({ origin_account: conn.google_email, submitted_by: conn.user_id }).eq("id", d.id);
+        found = true;
+        break;
+      }
+      // No connected mailbox has it anymore (deleted/archived elsewhere): mark checked, no inbox link.
+      if (!found) await db.from("source_documents").update({ origin_account: "" }).eq("id", d.id);
+      checked++;
+    }
+  };
+  await Promise.all(Array.from({ length: 5 }, worker));
+  return { checked, withImages, newItems, remaining: queue.length };
 }
 
 export async function syncAllGmail(db: Db) {

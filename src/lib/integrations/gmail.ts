@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { contentImageUrls, fetchPublicImage } from "@/lib/integrations/images";
 
 /**
  * Minimal Gmail API client (REST, no SDK). Scope: gmail.readonly — the least
@@ -70,6 +71,7 @@ export interface MailMessage {
   subject: string;
   date: string; // ISO
   text: string;
+  /** PDFs and images: attached, embedded inline, or loaded from the web by the email. */
   attachments: MailAttachment[];
 }
 export interface MailHeaders {
@@ -140,18 +142,28 @@ export class GmailProvider implements MailProvider {
     let plain = "";
     let html = "";
     const attachments: { filename: string; mime: string; attachmentId: string }[] = [];
+    const inline: MailAttachment[] = [];
     const walk = (p: Part) => {
-      if (p.filename && p.body?.attachmentId && ATTACH_TYPES.includes(p.mimeType ?? "") && (p.body.size ?? 0) <= MAX_ATTACH) {
-        attachments.push({ filename: p.filename, mime: p.mimeType!, attachmentId: p.body.attachmentId });
+      const isFile = ATTACH_TYPES.includes(p.mimeType ?? "");
+      // Attached or inline (cid:) images often have no filename — read them too.
+      if (isFile && p.body?.attachmentId && (p.body.size ?? 0) <= MAX_ATTACH && (p.body.size ?? 0) >= 6 * 1024) {
+        attachments.push({ filename: p.filename || "inline-image", mime: p.mimeType!, attachmentId: p.body.attachmentId });
+      } else if (isFile && p.body?.data && (p.body.size ?? 0) >= 6 * 1024) {
+        inline.push({ filename: p.filename || "inline-image", mime: p.mimeType!, data: Buffer.from(p.body.data, "base64url") });
       } else if (p.mimeType === "text/plain" && p.body?.data && !plain) plain = Buffer.from(p.body.data, "base64url").toString("utf8");
       else if (p.mimeType === "text/html" && p.body?.data && !html) html = Buffer.from(p.body.data, "base64url").toString("utf8");
       p.parts?.forEach(walk);
     };
     walk(m.payload);
-    const files: MailAttachment[] = [];
-    for (const a of attachments.slice(0, 3)) {
+    const files: MailAttachment[] = [...inline];
+    for (const a of attachments.slice(0, 6)) {
       const body = await this.api<{ data: string }>(`messages/${id}/attachments/${a.attachmentId}`);
       files.push({ filename: a.filename, mime: a.mime, data: Buffer.from(body.data, "base64url") });
+    }
+    // Images the email loads from the web (Smore/ParentSquare/Canva newsletters, flyers).
+    if (html && files.length < 6) {
+      const remote = await Promise.all(contentImageUrls(html, 6 - files.length).map((u) => fetchPublicImage(u)));
+      for (const r of remote) if (r) files.push({ filename: "email-image", mime: r.mime, data: r.data });
     }
     return {
       id: m.id,

@@ -31,8 +31,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
           <div className="flex items-center gap-2">
             <TopNav reviewCount={count ?? 0} />
-            <Link href="/points" aria-label="Points" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200/60">
-              <Icon name="star" className="h-5 w-5" />
+            <Link href="/tasks" aria-label="Tasks" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200/60">
+              <Icon name="task" className="h-5 w-5" />
             </Link>
             <Link href="/connections" aria-label="Connections" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-200/60">
               <Icon name="plug" className="h-5 w-5" />

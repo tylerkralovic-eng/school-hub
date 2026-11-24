@@ -153,12 +153,17 @@ export async function approveReview(_: ActionState, form: FormData): Promise<Act
       location: get(id, "location") || null,
     });
   }
-  const result = await applyReview(ctx.supabase, { familyId: ctx.family.id, userId: ctx.userId, timezone: ctx.family.timezone, children: ctx.children, schools: ctx.schools }, decisions);
+  const members: Record<string, string> = {};
+  for (const v of form.getAll("member").map(String).slice(0, 600)) {
+    const [m, p] = v.split(":");
+    if (m && p && ids.includes(p)) members[m] = p;
+  }
+  const result = await applyReview(ctx.supabase, { familyId: ctx.family.id, userId: ctx.userId, timezone: ctx.family.timezone, children: ctx.children, schools: ctx.schools }, decisions, members);
   await audit(ctx, "review.applied", undefined, { created: result.created, merged: result.merged, rejected: result.rejected });
   revalidatePath("/", "layout");
   if (result.errors.length) return { error: `${result.created + result.merged} saved. Fix the rest: ${result.errors.join(" ")}` };
   const batch = String(form.get("batch") ?? "");
-  redirect(`/review/${batch}?saved=${result.created}&merged=${result.merged}&skipped=${result.rejected}`);
+  redirect(`${batch ? `/review/${batch}` : "/review"}?saved=${result.created}&merged=${result.merged}&skipped=${result.rejected}`);
 }
 
 /** Deletes an original document (file + text) and its pending suggestions. Approved items stay. */

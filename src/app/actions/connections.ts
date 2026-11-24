@@ -8,7 +8,7 @@ import { decryptSecret } from "@/lib/integrations/crypto";
 import { GmailAuthError, GmailProvider, accessTokenFor, revokeToken } from "@/lib/integrations/gmail";
 import { discoverSchoolSenders } from "@/lib/integrations/discover-ai";
 import type { SenderSuggestion } from "@/lib/integrations/discover";
-import { syncConnection } from "@/lib/integrations/gmail-sync";
+import { rereadEmailImages, syncConnection } from "@/lib/integrations/gmail-sync";
 import { normalizePattern } from "@/lib/integrations/rules";
 import { PLATFORMS } from "@/lib/platforms";
 import { audit, requireFamily } from "@/lib/server/context";
@@ -212,4 +212,16 @@ export async function approveSenders(picks: { pattern: string; platform_key: str
   const res = conn ? await syncConnection(db, conn) : { created: 0 };
   revalidatePath("/", "layout");
   return { added: rows.length, found: res.created };
+}
+
+
+/** One-time: re-read imported emails for their pictures and flyers. */
+export async function rereadImages(): Promise<{ reply: string }> {
+  const ctx = await requireFamily();
+  const r = await rereadEmailImages(createAdminClient(), ctx.family.id);
+  await audit(ctx, "gmail.reread_images", undefined, r);
+  revalidatePath("/", "layout");
+  if (r.remaining === -1) return { reply: "Google access expired — reconnect Gmail on the Connect page, then try again." };
+  const more = r.remaining ? ` ${r.remaining} more to go — I'll ask again in a moment.` : "";
+  return { reply: (r.withImages ? `Checked ${r.checked} emails — ${r.withImages} had pictures or flyers, with ${r.newItems} new things to look at in Review.` : `Checked ${r.checked} emails — no pictures or flyers with extra details.`) + more };
 }

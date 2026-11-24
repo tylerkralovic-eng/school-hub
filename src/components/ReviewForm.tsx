@@ -5,6 +5,7 @@ import { approveReview } from "@/app/actions/ingest";
 import { Icon } from "@/components/Icon";
 import { FormError, SubmitButton } from "@/components/forms";
 import { inputClass } from "@/components/ui";
+import { SECTION_INFO, SECTION_ORDER, type Section } from "@/lib/review-model";
 
 export interface ReviewCandidate {
   id: string;
@@ -24,6 +25,10 @@ export interface ReviewCandidate {
   needsReview: boolean;
   reviewReason: string | null;
   duplicateTitle: string | null;
+  section: Section;
+  flag: string | null;
+  sourceLabel: string;
+  members: { id: string; label: string }[];
 }
 
 const KINDS = [
@@ -44,11 +49,13 @@ function prettyDate(d: string | null, t: string | null) {
 
 export function ReviewForm({ batchId, candidates, whoOptions }: { batchId: string; candidates: ReviewCandidate[]; whoOptions: { value: string; label: string }[] }) {
   const [state, action] = useActionState(approveReview, undefined);
-  const [include, setInclude] = useState<Record<string, boolean>>(() => Object.fromEntries(candidates.map((c) => [c.id, true])));
+  const [include, setInclude] = useState<Record<string, boolean>>(() => Object.fromEntries(candidates.map((c) => [c.id, SECTION_INFO[c.section].defaultOn])));
+  const [showPast, setShowPast] = useState(false);
   const [kinds, setKinds] = useState<Record<string, string>>(() => Object.fromEntries(candidates.map((c) => [c.id, c.kind])));
   const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(candidates.map((c) => [c.id, c.needsReview])));
   const count = useMemo(() => Object.values(include).filter(Boolean).length, [include]);
   const flagged = candidates.filter((c) => c.needsReview).length;
+  const extraSources = candidates.reduce((n, c) => n + c.members.length, 0);
   const whoLabel = (v: string) => whoOptions.find((o) => o.value === v)?.label ?? "Whole family";
 
   return (
@@ -56,7 +63,7 @@ export function ReviewForm({ batchId, candidates, whoOptions }: { batchId: strin
       <input type="hidden" name="batch" value={batchId} />
       <div className="flex items-center justify-between px-1 text-sm">
         <span className="text-slate-600">
-          {candidates.length} found{flagged ? <> · <span className="font-semibold text-amber-700">{flagged} need a look</span></> : null}
+          {candidates.length} found{extraSources ? ` · ${extraSources} duplicate${extraSources === 1 ? "" : "s"} combined` : ""}{flagged ? <> · <span className="font-semibold text-amber-700">{flagged} need a look</span></> : null}
         </span>
         <span className="flex gap-3">
           <button type="button" className="font-medium text-indigo-600" onClick={() => setInclude(Object.fromEntries(candidates.map((c) => [c.id, true])))}>All</button>
@@ -64,13 +71,31 @@ export function ReviewForm({ batchId, candidates, whoOptions }: { batchId: strin
         </span>
       </div>
 
-      {candidates.map((c) => {
+      {SECTION_ORDER.filter((sec) => candidates.some((c) => c.section === sec)).map((sec) => {
+        const list = candidates.filter((c) => c.section === sec);
+        const hidden = sec === "past" && !showPast;
+        const allOn = list.every((x) => include[x.id]);
+        return (
+          <section key={sec} className="space-y-2" aria-label={SECTION_INFO[sec].title}>
+            <div className="flex items-end justify-between px-1 pt-2">
+              <div>
+                <h2 className={`text-[13px] font-semibold uppercase tracking-wider ${sec === "attention" ? "text-rose-600" : "text-slate-500"}`}>{SECTION_INFO[sec].title} · {list.length}</h2>
+                <p className="text-xs text-slate-500">{SECTION_INFO[sec].hint}</p>
+              </div>
+              {sec === "past" ? (
+                <button type="button" className="text-sm font-medium text-indigo-600" onClick={() => setShowPast(!showPast)}>{showPast ? "Hide" : "Show"}</button>
+              ) : (
+                <button type="button" className="text-sm font-medium text-indigo-600" onClick={() => setInclude({ ...include, ...Object.fromEntries(list.map((c) => [c.id, !allOn])) })}>{allOn ? "None" : "All"}</button>
+              )}
+            </div>
+            {list.map((c) => {
         const on = include[c.id];
         const isOpen = open[c.id];
         const kind = kinds[c.id];
         return (
-          <div key={c.id} data-testid="candidate" className={`rounded-2xl border bg-white p-3.5 shadow-sm transition-opacity ${c.needsReview ? "border-amber-300" : "border-slate-200"} ${on ? "" : "opacity-55"}`}>
+          <div key={c.id} data-testid="candidate" hidden={hidden} className={`rounded-2xl border bg-white p-3.5 shadow-sm transition-opacity ${c.needsReview ? "border-amber-300" : "border-slate-200"} ${on ? "" : "opacity-55"}`}>
             <input type="hidden" name="candidate" value={c.id} />
+            {c.members.map((m) => <input key={m.id} type="hidden" name="member" value={`${m.id}:${c.id}`} />)}
             <div className="flex items-start gap-3">
               <label className="mt-0.5 flex cursor-pointer items-center">
                 <input type="checkbox" name={`include.${c.id}`} checked={on} onChange={(e) => setInclude({ ...include, [c.id]: e.target.checked })} className="h-6 w-6 rounded-md border-slate-300 accent-indigo-600" aria-label={`Include "${c.title}"`} />
@@ -83,6 +108,8 @@ export function ReviewForm({ batchId, candidates, whoOptions }: { batchId: strin
                   {" · "}{whoLabel(c.who)}
                   {c.amount ? ` · $${c.amount}` : ""}
                 </p>
+                {c.flag && <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${/past due/i.test(c.flag) ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800"}`}>{c.flag}</span>}
+                <p className="mt-1 truncate text-[11px] text-slate-500">{c.members.length ? `Found in ${c.members.length + 1} places: ${[c.sourceLabel, ...c.members.map((m) => m.label)].join(" · ")}` : c.sourceLabel}</p>
               </button>
               <button type="button" onClick={() => setOpen({ ...open, [c.id]: !isOpen })} className="p-1 text-slate-400" aria-label={isOpen ? "Collapse" : "Edit"}>
                 <Icon name={isOpen ? "chevronDown" : "edit"} className="h-4 w-4" />
@@ -146,6 +173,9 @@ export function ReviewForm({ batchId, candidates, whoOptions }: { batchId: strin
               {c.evidence && <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-xs italic text-slate-600">Source: “{c.evidence}”</p>}
             </div>
           </div>
+        );
+      })}
+          </section>
         );
       })}
 

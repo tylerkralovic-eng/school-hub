@@ -24,6 +24,37 @@ export const POINT_MIN = -10;
 export const POINT_MAX = 10;
 export const clampPoints = (n: number) => Math.max(POINT_MIN, Math.min(POINT_MAX, Math.round(Number.isFinite(n) ? n : 0)));
 
+/**
+ * Like-for-like scoring across schools: each level (or count) is sorted into a
+ * tier by what the day MEANT, then scored on one family scale. Defaults match
+ * how the founding family scored stars vs. Skittles.
+ */
+export const TIERS = ["exceptional", "good", "slip", "issues", "rough"] as const;
+export type Tier = (typeof TIERS)[number];
+export const RUBRIC: Record<Tier, number> = { exceptional: 3, good: 1, slip: 1, issues: 0, rough: -2 };
+export const TIER_LABEL: Record<Tier, string> = { exceptional: "Exceptional day", good: "Normal good day", slip: "Small slip", issues: "A few issues", rough: "Rough day" };
+
+/** Rule-based tiers (used without AI): rare/superb top level = exceptional, last = rough. */
+export function heuristicLevelTiers(levels: { label: string; meaning: string }[]): Tier[] {
+  const n = levels.length;
+  const top = `${levels[0]?.label ?? ""} ${levels[0]?.meaning ?? ""}`.toLowerCase();
+  const exceptionalTop = n >= 3 && /superb|excellent|outstanding|rare|amazing|exceptional|best|great|extra/.test(top);
+  const goodIndex = exceptionalTop ? 1 : 0;
+  return levels.map((_, i) => {
+    if (i === n - 1) return "rough";
+    if (i === 0 && exceptionalTop) return "exceptional";
+    if (i === goodIndex) return "good";
+    return i === n - 2 ? "issues" : "slip";
+  });
+}
+
+/** Count systems: full count = good day, one lost = small slip, more lost = issues, none = rough. */
+export function countTier(n: number, max: number): Tier {
+  if (n >= max) return "good";
+  if (n === 0) return "rough";
+  return n === max - 1 ? "slip" : "issues";
+}
+
 /** "+3", "−2", "0" */
 export function formatPoints(n: number): string {
   return n > 0 ? `+${n}` : n < 0 ? `\u2212${Math.abs(n)}` : "0";

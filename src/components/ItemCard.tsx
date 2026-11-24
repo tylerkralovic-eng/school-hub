@@ -4,7 +4,7 @@ import { TaskToggle } from "@/components/TaskToggle";
 import { ChildChip, FamilyChip, KindIcon } from "@/components/ui";
 import { platformName } from "@/lib/platforms";
 import type { FamilyContext } from "@/lib/server/context";
-import { receivedAt, type ItemSourceView, type ItemView } from "@/lib/server/items";
+import { inboxLink, receivedAt, type ItemSourceView, type ItemView } from "@/lib/server/items";
 import { dueLabel, fmt, fmtTime, receivedLabel, relativeDay } from "@/lib/time";
 import { CATEGORY_LABELS, CHANNEL_LABELS } from "@/lib/types";
 
@@ -134,8 +134,13 @@ export function ItemCard({ item, ctx, compact = false, back }: { item: ItemView;
                   <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
                     <span className="font-medium">{sourceName(s)}</span>
                     {s.document && <span>· Received {fmt(s.document.received_at, tz, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>}
-                    {s.document && (
-                      <Link href={`/documents/${s.document.id}`} className="font-medium text-indigo-600">View original</Link>
+                    {s.document && inboxLink(s.document) ? (
+                      <>
+                        <a href={inboxLink(s.document)!} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600">Open in Gmail</a>
+                        <Link href={`/documents/${s.document.id}`} className="text-slate-500 underline">copy in School Hub</Link>
+                      </>
+                    ) : (
+                      s.document && <Link href={`/documents/${s.document.id}`} className="font-medium text-indigo-600">View original</Link>
                     )}
                   </figcaption>
                 </figure>

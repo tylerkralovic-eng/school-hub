@@ -38,7 +38,7 @@ export function QuickQuestion({ gap }: { gap: Gap }) {
       {reply ? (
         <p role="status" className={`mt-3 break-words rounded-2xl px-3 py-2 text-[15px] ${reply.error ? "bg-amber-50 text-amber-900" : "bg-emerald-50 text-emerald-900"}`}>{reply.text}</p>
       ) : pending && gap.kind === "action" ? (
-        <p role="status" className="mt-3 flex items-center gap-2 text-sm text-indigo-700"><span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />Searching official school websites… this can take a minute.</p>
+        <p role="status" className="mt-3 flex items-center gap-2 text-sm text-indigo-700"><span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />{gap.id === "reread" ? "Reading pictures in your emails… this can take a minute or two." : "Searching official school websites… this can take a minute."}</p>
       ) : (
         <div className="mt-3">
           {gap.kind === "text" && (

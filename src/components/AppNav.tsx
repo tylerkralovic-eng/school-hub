@@ -8,8 +8,8 @@ const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Home", icon: "home" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/add", label: "Add", icon: "plus" },
+  { href: "/points", label: "Points", icon: "star" },
   { href: "/inbox", label: "Inbox", icon: "inbox" },
-  { href: "/tasks", label: "Tasks", icon: "task" },
 ];
 
 function isActive(pathname: string, href: string) {

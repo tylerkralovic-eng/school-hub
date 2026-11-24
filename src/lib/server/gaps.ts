@@ -4,6 +4,7 @@ import { features } from "@/lib/env";
 import { hasAi } from "@/lib/onboarding/ai";
 import { PLATFORMS } from "@/lib/platforms";
 import type { FamilyContext } from "@/lib/server/context";
+import { findDuplicateItems } from "@/lib/server/duplicates";
 
 /**
  * "Quick question": the single most useful thing School Hub doesn't know yet,
@@ -59,6 +60,16 @@ export async function nextGap(ctx: FamilyContext): Promise<Gap | null> {
     if (!p.notification_channels.includes("email") || (rules.data ?? []).some((r) => r.platform_key === p.platform_key)) continue;
     const name = PLATFORMS.find((x) => x.key === p.platform_key)?.name ?? p.platform_key;
     gaps.push({ id: `sender:${p.platform_key}`, text: `What email address do ${name} messages come from? Check any recent one in your inbox.`, kind: "text", placeholder: "e.g. notifications@…" });
+  }
+
+  if (gmailOk && hasAi()) {
+    const { count: unread } = await ctx.supabase.from("source_documents").select("id", { count: "exact", head: true }).eq("family_id", ctx.family.id).eq("channel", "gmail").is("origin_account", null);
+    if (unread) gaps.unshift({ id: "reread", text: `New: I can now read the pictures and flyers inside emails — that's often where the details are. Re-check your ${unread} imported ${unread === 1 ? "email" : "emails"}?`, kind: "action", cta: "Yes, re-check them" });
+  }
+
+  if ((itemCount.count ?? 0) > 1) {
+    const dupes = await findDuplicateItems(ctx);
+    if (dupes.length) gaps.unshift({ id: `dupes:${dupes.length}`, text: `I found ${dupes.length} ${dupes.length === 1 ? "thing" : "things"} that showed up in more than one place — like “${dupes[0][0].title}”. Want to combine them?`, kind: "link", href: "/review/duplicates", cta: "Review duplicates" });
   }
 
   if (!itemCount.count) gaps.push({ id: "firstdoc", text: "Have a school calendar, flyer or newsletter handy? Snap a photo and I'll fill in your calendar.", kind: "link", href: "/add", cta: "Add a photo" });
