@@ -7,6 +7,7 @@ import { QuickQuestion } from "@/components/QuickQuestion";
 import { TaskToggle } from "@/components/TaskToggle";
 import { Card, EmptyState, Notice, SectionHeader, buttonClass } from "@/components/ui";
 import { loadBehavior } from "@/lib/server/behavior";
+import { MEETING_SERIES } from "@/lib/server/meeting";
 import { requireFamily } from "@/lib/server/context";
 import { getChildFilter } from "@/lib/server/filters";
 import { nextGap } from "@/lib/server/gaps";
@@ -51,6 +52,8 @@ export default async function HomePage() {
   const attention = tasks.filter((t) => t.due_at && (t.due_at < in3 || (t.category === "payment" && t.due_at < in7)));
   const alerts = events.filter((e) => e.starts_at! < startTomorrow && (e.category === "closure" || e.category === "early_dismissal"));
   const todays = events.filter((e) => e.starts_at! < startTomorrow);
+  // Family meeting today or tomorrow → one-tap to the deck.
+  const meeting = events.find((e) => e.series === MEETING_SERIES && e.starts_at! < zonedToUtc(addDays(today, 2), null, tz) && e.starts_at! >= now.toISOString());
 
   // Next 7 days, as compact day rows: events + other task deadlines.
   const rows = [
@@ -88,6 +91,14 @@ export default async function HomePage() {
         <Link href="/review" className="flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-amber-950">
           <Icon name="sparkle" className="h-5 w-5 shrink-0 text-amber-600" />
           <span className="flex-1 text-[15px]"><b>{pending} new {pending === 1 ? "item" : "items"}</b> to review — sorted by what&apos;s urgent.</span>
+          <Icon name="chevronRight" className="h-5 w-5" />
+        </Link>
+      )}
+
+      {meeting && (
+        <Link href="/meeting" className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 text-emerald-950">
+          <Icon name="sparkle" className="h-5 w-5 shrink-0 text-emerald-600" />
+          <span className="flex-1 text-[15px]"><b>Family meeting {meeting.starts_at! < startTomorrow ? "tonight" : "tomorrow"}</b> at {fmtTime(meeting.starts_at!, tz)} — this week&apos;s deck is ready.</span>
           <Icon name="chevronRight" className="h-5 w-5" />
         </Link>
       )}

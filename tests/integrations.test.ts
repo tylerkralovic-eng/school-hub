@@ -74,7 +74,7 @@ describe("reminders", () => {
       { id: "e2", kind: "event", title: "Winter break", details: null, location: null, starts_at: zonedToUtc("2026-12-21", null, tz), ends_at: zonedToUtc("2027-01-01", null, tz), all_day: true, due_at: null, completed_at: null, updated_at: "2026-11-13T00:00:00.000Z", childName: null },
       { id: "t1", kind: "task", title: "Pay fee", details: null, location: null, starts_at: null, ends_at: null, all_day: false, due_at: zonedToUtc("2026-12-04", "23:59", tz), completed_at: null, updated_at: "2026-11-13T00:00:00.000Z", childName: null },
     ], "schoolhub.app");
-    expect(ics).toContain("SUMMARY:Everley: Concert\; grades K-2");
+    expect(ics).toContain("SUMMARY:Everley: Concert\\; grades K-2");
     expect(ics).toContain("DTSTART:20261214T230000Z");
     expect(ics).toContain("DTSTART;VALUE=DATE:20261221");
     expect(ics).toContain("DTEND;VALUE=DATE:20270102");

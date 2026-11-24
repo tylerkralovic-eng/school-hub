@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { purgeExpiredDocuments, sendDigests } from "@/lib/server/jobs";
 import { syncAllGmail } from "@/lib/integrations/gmail-sync";
+import { syncAllMeetings } from "@/lib/server/meeting";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 300;
@@ -15,7 +16,7 @@ function authorized(req: Request) {
   return got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want));
 }
 
-/** Scheduled job (Vercel Cron): Gmail sync, morning digests, retention purge. */
+/** Scheduled job (Vercel Cron): Gmail sync, morning digests, retention purge, family meetings. */
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const db = createAdminClient();
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
     ["gmail", () => syncAllGmail(db)],
     ["digests", () => sendDigests(db)],
     ["purged", () => purgeExpiredDocuments(db)],
+    ["meetings", () => syncAllMeetings(db)],
   ] as const) {
     try {
       result[name] = await job();

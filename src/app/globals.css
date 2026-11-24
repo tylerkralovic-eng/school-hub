@@ -24,3 +24,15 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Family meeting deck: one 16:9 slide per landscape page when printing / saving as PDF. */
+@page { size: 13.333in 7.5in; margin: 0; }
+@media print {
+  html, body, main { background: #fff !important; padding: 0 !important; min-height: 0 !important; }
+  .deck-list > div:last-child .deck-slide { break-after: auto; }
+  .no-print { display: none !important; }
+  .deck-list { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .deck-list > * + * { margin-top: 0 !important; }
+  .deck-slide { width: 13.333in !important; height: 7.5in !important; aspect-ratio: auto !important; border-radius: 0 !important; box-shadow: none !important; break-after: page; break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

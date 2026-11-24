@@ -42,7 +42,7 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="space-y-6 pb-6">
-      <PageTitle title="Points" subtitle="Log days, fill in history and set prizes." action={<Link href="/points/kids" className={`${buttonClass.secondary} !px-3 !py-2 text-sm`}>Kid view</Link>} />
+      <PageTitle title="Points" subtitle="Log days, fill in history and set prizes." action={<span className="flex gap-2"><Link href="/meeting" className={`${buttonClass.secondary} !px-3 !py-2 text-sm`}>Family meeting</Link><Link href="/points/kids" className={`${buttonClass.secondary} !px-3 !py-2 text-sm`}>Kid view</Link></span>} />
       {sp.setup === "done" && <Notice tone="ok" title="Tracking is on">Log today below. To fill in earlier days, tap them in the month grid.</Notice>}
       <BehaviorSummary ctx={ctx} systems={systems} entries={entries} rewards={rewards} today={today} childFilter={childFilter} showCheckIn={false} />
 

@@ -17,7 +17,7 @@ export interface IcsItem {
 }
 
 function esc(s: string) {
-  return s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 }
 function fold(line: string) {
   const out: string[] = [];

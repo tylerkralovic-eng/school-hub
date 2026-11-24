@@ -173,6 +173,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"family_meetings": {
+                  Row: {
+                    "created_at": string,"family_id": string,"meeting_date": string,"value_key": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"family_id": string,"meeting_date": string,"value_key": string
+                  }
+                  Update: {
+                    "created_at"?: string,"family_id"?: string,"meeting_date"?: string,"value_key"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "family_meetings_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "families"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"family_members": {
                   Row: {
                     "created_at": string,"digest_enabled": boolean,"display_name": string,"email": string,"family_id": string,"last_digest_on": string | null,"role": Database["public"]['Enums']["member_role"],"user_id": string
@@ -307,14 +327,14 @@ isOneToOne: false
                   ]
                 },"items": {
                   Row: {
-                    "all_day": boolean,"amount_cents": number | null,"assignee_id": string | null,"category": Database["public"]['Enums']["item_category"],"child_id": string | null,"completed_at": string | null,"completed_by": string | null,"created_at": string,"created_by": string | null,"details": string | null,"due_at": string | null,"ends_at": string | null,"family_id": string,"id": string,"kind": Database["public"]['Enums']["item_kind"],"location": string | null,"school_id": string | null,"starts_at": string | null,"title": string,"updated_at": string
+                    "all_day": boolean,"amount_cents": number | null,"assignee_id": string | null,"category": Database["public"]['Enums']["item_category"],"child_id": string | null,"completed_at": string | null,"completed_by": string | null,"created_at": string,"created_by": string | null,"details": string | null,"due_at": string | null,"ends_at": string | null,"family_id": string,"id": string,"kind": Database["public"]['Enums']["item_kind"],"location": string | null,"school_id": string | null,"series": string | null,"starts_at": string | null,"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "all_day"?: boolean,"amount_cents"?: number | null,"assignee_id"?: string | null,"category"?: Database["public"]['Enums']["item_category"],"child_id"?: string | null,"completed_at"?: string | null,"completed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"details"?: string | null,"due_at"?: string | null,"ends_at"?: string | null,"family_id": string,"id"?: string,"kind": Database["public"]['Enums']["item_kind"],"location"?: string | null,"school_id"?: string | null,"starts_at"?: string | null,"title": string,"updated_at"?: string
+                    "all_day"?: boolean,"amount_cents"?: number | null,"assignee_id"?: string | null,"category"?: Database["public"]['Enums']["item_category"],"child_id"?: string | null,"completed_at"?: string | null,"completed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"details"?: string | null,"due_at"?: string | null,"ends_at"?: string | null,"family_id": string,"id"?: string,"kind": Database["public"]['Enums']["item_kind"],"location"?: string | null,"school_id"?: string | null,"series"?: string | null,"starts_at"?: string | null,"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "all_day"?: boolean,"amount_cents"?: number | null,"assignee_id"?: string | null,"category"?: Database["public"]['Enums']["item_category"],"child_id"?: string | null,"completed_at"?: string | null,"completed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"details"?: string | null,"due_at"?: string | null,"ends_at"?: string | null,"family_id"?: string,"id"?: string,"kind"?: Database["public"]['Enums']["item_kind"],"location"?: string | null,"school_id"?: string | null,"starts_at"?: string | null,"title"?: string,"updated_at"?: string
+                    "all_day"?: boolean,"amount_cents"?: number | null,"assignee_id"?: string | null,"category"?: Database["public"]['Enums']["item_category"],"child_id"?: string | null,"completed_at"?: string | null,"completed_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"details"?: string | null,"due_at"?: string | null,"ends_at"?: string | null,"family_id"?: string,"id"?: string,"kind"?: Database["public"]['Enums']["item_kind"],"location"?: string | null,"school_id"?: string | null,"series"?: string | null,"starts_at"?: string | null,"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -334,6 +354,26 @@ isOneToOne: false
       columns: ["school_id"]
 isOneToOne: false
       referencedRelation: "schools"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"meeting_settings": {
+                  Row: {
+                    "day": number,"duration_min": number,"family_id": string,"time": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "day"?: number,"duration_min"?: number,"family_id": string,"time"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "day"?: number,"duration_min"?: number,"family_id"?: string,"time"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "meeting_settings_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: true
+      referencedRelation: "families"
       referencedColumns: ["id"]
     }
                   ]
